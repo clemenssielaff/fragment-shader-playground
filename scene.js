@@ -11,13 +11,32 @@ const { mat4 } = glMatrix;
 // Shader source =========================================================== //
 
 const vertexShaderSource = `
-    // TOOD: Add vertex shader code here
+attribute vec4 aPosition;
+attribute vec4 aVertexColor;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uModelViewMatrix;
+
+varying lowp vec4 vColor;
+
+void main() {
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
+    vColor = aVertexColor;
+}
 `;
 
 
 const fragmentShaderSource = `
-    // TOOD: Add fragment shader code here
+varying lowp vec4 vColor;
+
+uniform mediump float uTime;
+
+void main() {
+    gl_FragColor = vec4(vColor.xyz * ((sin(uTime) + 1.0)/2.0), 1);
+}
 `;
+
+var time = 0.0;
 
 
 // Utility functions ======================================================= //
@@ -56,6 +75,7 @@ function main() {
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
             modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+            time: gl.getUniformLocation(shaderProgram, 'uTime'),
         }
     };
 
@@ -101,7 +121,15 @@ function main() {
     gl.depthFunc(gl.LEQUAL);                // Near things obscure far things
 
     // Start the render loop
-    drawScene(gl, programInfo);
+    var last;
+    function render(now){
+        drawScene(gl, programInfo);
+        const deltaTime = now - (last || now)
+        time += deltaTime / 1000.0
+        last = now
+        requestAnimationFrame(render)
+    }
+    requestAnimationFrame(render);
 }
 
 
@@ -301,17 +329,17 @@ function drawScene(gl, programInfo) {
     mat4.rotate(
         modelViewMatrix,    // destination matrix
         modelViewMatrix,    // matrix to rotate
-        0.3,                // amount to rotate in radians
+        0.3 * time,         // amount to rotate in radians
         [0, 0, 1]);         // axis to rotate around (Z)
     mat4.rotate(
         modelViewMatrix,    // destination matrix
         modelViewMatrix,    // matrix to rotate
-        0.5,                // amount to rotate in radians
+        0.5 * time,         // amount to rotate in radians
         [0, 1, 0]);         // axis to rotate around (Y)
     mat4.rotate(
         modelViewMatrix,    // destination matrix
         modelViewMatrix,    // matrix to rotate
-        0.8,                // amount to rotate in radians
+        0.8 * time,         // amount to rotate in radians
         [1, 0, 0]);         // axis to rotate around (X)
 
 
@@ -324,6 +352,9 @@ function drawScene(gl, programInfo) {
         programInfo.uniformLocations.modelViewMatrix,
         false,
         modelViewMatrix);
+    gl.uniform1f(
+        programInfo.uniformLocations.time,
+        time);
 
     // The draw call
     gl.drawElements(
