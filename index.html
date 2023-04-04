@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fragment Shader Playground</title>
+    <style>
+        canvas {
+            width: 100vw;
+            height: 100vh;
+            /* image-rendering: pixelated; */ /* use for small width and height */
+        }
+    </style>
+</head>
+<body>
+    <!-- set width and height to small values and adjust style above for pixelated view -->
+    <canvas id="main_canvas" width=1280 height=960 ></canvas>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/3.4.1/gl-matrix-min.js" integrity="sha512-e/xRwar4CU9Voj1CcsHrVxdmD7JFqLNUu/knzbJRihZ4dtR2Kszc3IMAa8XJvedQOY/xuEpJvWyJDyJw/ac35w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="./scene.js"></script>
+</html>
