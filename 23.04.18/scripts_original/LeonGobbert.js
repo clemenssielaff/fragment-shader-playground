@@ -101,10 +101,10 @@ function isPowerOf2(value) {
 // Main function =========================================================== //
 
 
-export function main() {
+function main() {
     // Get a WebGL context from the canvas element in the DOM
     /**@type {WebGLRenderingContext} */
-    const gl = document.querySelector("#canvas").getContext('webgl');
+    const gl = document.querySelector("#main_canvas").getContext('webgl');
     if (!gl) {
         console.log('WebGL unavailable');
     } else {
@@ -134,13 +134,13 @@ export function main() {
     };
 
     // Initialize the geometry in vertex buffer objects 
-    const positionBuffer = createPositionBuffer(gl)
-    const normalBuffer = createNormalBuffer(gl)
-    const textureBuffer = createTextureBuffer(gl)
-    const indexBuffer = createIndexBuffer(gl)
+    positionBuffer = createPositionBuffer(gl)
+    normalBuffer = createNormalBuffer(gl)
+    textureBuffer = createTextureBuffer(gl)
+    indexBuffer = createIndexBuffer(gl)
 
     // Load texture
-    const texture = loadTexture(gl, "assets/brick_texture.jpg"); 
+    const texture = loadTexture(gl, "brick_texture.jpg");
     // Flip image pixels into the bottom-to-top order that WebGL expects.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
@@ -429,7 +429,7 @@ function createIndexBuffer(gl) {
 /// Initialize a shader program from vertex- and fragment-shader sources.
 function initShaderProgram(gl) {
     // Load the Vertex- and Fragment-Shader
-    const loadShader = (type, source) => {
+    loadShader = (type, source) => {
         const shader = gl.createShader(type)
         gl.shaderSource(shader, source)
         gl.compileShader(shader)
@@ -550,4 +550,4 @@ function drawScene(gl, programInfo, texture) {
 
 
 // Start the main program
-// main();
+main();

@@ -58,4 +58,4 @@ function showScene(scene) {
     }
 }
 
-showScene(12);
+showScene(7);
