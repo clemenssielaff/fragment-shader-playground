@@ -1,0 +1,36 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.217.1/containers/cpp
+{
+	"name": "HFU",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": "..",
+		// see https://stackoverflow.com/a/75359065
+		"args": {
+			"BUILDKIT_INLINE_CACHE": "0"
+		}
+	},
+	// Set *default* container-specific settings.json values on container create.
+	"customizations": {
+		"vscode": {
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"bmalehorn.vscode-fish",
+				"eamodio.gitlens",
+				"github.copilot",
+				"gruntfuggly.todo-tree",
+				"jpsnee.vscode-editor-macros",
+				"ow.vscode-subword-navigation",
+				"russelldavis.better-pageup-pagedown",
+				"ms-vsliveshare.vsliveshare"
+			]
+		}
+	},
+	// Additional mount points to add to the container.
+	"mounts": [
+		"source=${env:HOME}/.config/fish,target=/home/vscode/.config/fish,type=bind", // fish configuration
+		"source=${localWorkspaceFolder}/.devcontainer/fish_history,target=/home/vscode/.local/share/fish/fish_history,type=bind" // fish history
+	],
+	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode"
+}
