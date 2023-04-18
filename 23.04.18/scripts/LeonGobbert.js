@@ -85,7 +85,7 @@ void main() {
 }
 `;
 
-var time = 0.0;
+export let time = 0.0;
 
 
 // Utility functions ======================================================= //
@@ -101,15 +101,15 @@ function isPowerOf2(value) {
 // Main function =========================================================== //
 
 
-export function main() {
+export function main(gl) {
     // Get a WebGL context from the canvas element in the DOM
     /**@type {WebGLRenderingContext} */
-    const gl = document.querySelector("#canvas").getContext('webgl');
-    if (!gl) {
-        console.log('WebGL unavailable');
-    } else {
-        console.log('WebGL is good to go');
-    }
+    // const gl = document.querySelector("#canvas").getContext('webgl');
+    // if (!gl) {
+    //     console.log('WebGL unavailable');
+    // } else {
+    //     console.log('WebGL is good to go');
+    // }
 
 
     // Initialize a shader program; this is where all the lighting
@@ -459,7 +459,7 @@ function initShaderProgram(gl) {
 
 
 /// Draw the scene.
-function drawScene(gl, programInfo, texture) {
+export function drawScene(gl, programInfo, texture) {
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

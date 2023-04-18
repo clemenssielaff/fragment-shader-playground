@@ -3,22 +3,22 @@ let colors = []
 let centroids = []
 let resolution = []
 let then = 0.0;
-let time = 0.0
+export let time = 0.0
 const speed = 0.00003
 
 // main();
 
-export function main() {
+export function main(gl) {
     /*========== Create a WebGL Context ==========*/
-    /** @type {HTMLCanvasElement} */
-    const canvas = document.querySelector("#canvas");
-    /** @type {WebGLRenderingContext} */
-    const gl = canvas.getContext('webgl');
-    if (!gl) {
-        console.log('WebGL unavailable');
-    } else {
-        console.log('WebGL is good to go');
-    }
+    // /** @type {HTMLCanvasElement} */
+    // const canvas = document.querySelector("#canvas");
+    // /** @type {WebGLRenderingContext} */
+    // const gl = canvas.getContext('webgl');
+    // if (!gl) {
+    //     console.log('WebGL unavailable');
+    // } else {
+    //     console.log('WebGL is good to go');
+    // }
     /*========== Define and Store the Geometry ==========*/
 
     // Define the points in the scene
@@ -166,7 +166,7 @@ function createRandomColors(count) {
 }
 
 
-function drawScene(gl, programInfo, deltaTime) {
+export function drawScene(gl, programInfo, deltaTime) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);

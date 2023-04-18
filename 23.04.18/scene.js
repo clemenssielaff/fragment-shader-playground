@@ -13,49 +13,68 @@ import * as weiden from "./scripts/SarahWeidenhiller.js";
 import * as winter from "./scripts/SoerenWinterhalder.js";
 
 
-/// Show the desired scene
-function showScene(scene) {
-    switch (scene) {
+/// Get a student project by id (in aphabetical order)
+function getProject(id) {
+    switch (id) {
         case 0:
-            reiprich.main();
-            break;
+            return reiprich
         case 1:
-            nguyen.main();
-            break;
+            return nguyen
         case 2:
-            meisler.main();
-            break;
+            return meisler
         case 3:
-            grabs.main()
-            break
+            return grabs
         case 4:
-            kowatsch.main()
-            break
+            return kowatsch
         case 5:
-            mieg.main()
-            break
+            return mieg
         case 6:
-            goepfert.main()
-            break
+            return goepfert
         case 7:
-            gobbert.main()
-            break
+            return gobbert
         case 8:
-            cataldo.main()
-            break
+            return cataldo
         case 9:
-            rubner.main()
-            break
+            return rubner
         case 10:
-            gaertner.main()
-            break
+            return gaertner
         case 11:
-            weiden.main()
-            break
+            return weiden
         case 12:
-            winter.main()
-            break
+            return winter
     }
 }
 
-showScene(7);
+function main() {
+    // Get a WebGL context from the canvas element in the DOM
+    const gl = document.querySelector("#canvas").getContext('webgl');
+    if (!gl) {
+        console.log('WebGL unavailable');
+    } else {
+        console.log('WebGL is good to go');
+    }
+
+    const project = getProject(12);
+    project.main(gl);
+
+    // // Prepare the OpenGL state machine
+    // gl.bindBuffer(gl.ARRAY_BUFFER, null);   // Unbind the position buffer (is not needed to draw)
+    // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,  // Bind the index buffer
+    //     indexBuffer);
+    // gl.useProgram(programInfo.program);     // Use the shader program
+    // gl.clearColor(0.0, 0.0, 0.0, 1.0);      // Clear to black, fully opaque
+    // gl.clearDepth(1.0);                     // Clear everything
+    // gl.enable(gl.DEPTH_TEST);               // Enable depth testing
+    // gl.depthFunc(gl.LEQUAL);                // Near things obscure far things
+
+    // let lastTime;
+    // function renderProject(now) {
+    //     drawScene(gl, programInfo);
+    //     const deltaTime = now - (lastTime || now);
+    //     project.time += deltaTime / 1000.0;
+    //     last = now;
+    //     requestAnimationFrame(renderProject);
+    // }
+    // requestAnimationFrame(renderProject);
+}
+main();

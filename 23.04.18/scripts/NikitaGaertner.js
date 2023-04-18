@@ -44,7 +44,7 @@ void main() {
 
 
 
-var time = 0.0;
+export let time = 0.0;
 
 
 // Utility functions ======================================================= //
@@ -57,14 +57,14 @@ function degToRad(grad) {
 // Main function =========================================================== //
 
 
-export function main() {
-    // Get a WebGL context from the canvas element in the DOM
-    const gl = document.querySelector("#canvas").getContext('webgl');
-    if (!gl) {
-        console.log('WebGL unavailable');
-    } else {
-        console.log('WebGL is good to go');
-    }
+export function main(gl) {
+    // // Get a WebGL context from the canvas element in the DOM
+    // const gl = document.querySelector("#canvas").getContext('webgl');
+    // if (!gl) {
+    //     console.log('WebGL unavailable');
+    // } else {
+    //     console.log('WebGL is good to go');
+    // }
 
     // Initialize a shader program; this is where all the lighting
     // for the vertices and so forth is established.
@@ -304,7 +304,7 @@ function initShaderProgram(gl) {
 
 
 /// Draw the scene.
-function drawScene(gl, programInfo) {
+export function drawScene(gl, programInfo) {
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

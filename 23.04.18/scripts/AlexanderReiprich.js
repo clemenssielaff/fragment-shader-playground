@@ -104,7 +104,7 @@ const fragmentShaderSource = `
     }
 `;
 
-var time = 0.0;
+export let time = 0.0;
 
 
 // Utility functions ======================================================= //
@@ -117,14 +117,14 @@ function degToRad(grad) {
 // Main function =========================================================== //
 
 
-export function main() {
-    // Get a WebGL context from the canvas element in the DOM
-    const gl = document.querySelector("#canvas").getContext('webgl');
-    if (!gl) {
-        console.log('WebGL unavailable');
-    } else {
-        console.log('WebGL is good to go');
-    }
+export function main(gl) {
+    // // Get a WebGL context from the canvas element in the DOM
+    // const gl = document.querySelector("#canvas").getContext('webgl');
+    // if (!gl) {
+    //     console.log('WebGL unavailable');
+    // } else {
+    //     console.log('WebGL is good to go');
+    // }
 
     // Initialize a shader program
     const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
@@ -331,7 +331,7 @@ function initShaderProgram(gl) {
 
 
 /// Draw the scene.
-function drawScene(gl, programInfo) {
+export function drawScene(gl, programInfo) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const projectionMatrix = mat4.create();

@@ -50,19 +50,19 @@ const fragmentShaderSource = `
     }
 `;
 
-var time = 0.0;
+export let time = 0.0;
 
 function degToRad(grad) {
     return (grad / 180.0) * Math.PI;
 }
 
-export function main() {
-    const gl = document.querySelector("#canvas").getContext('webgl');
-    if (!gl) {
-        console.log('WebGL unavailable');
-    } else {
-        console.log('WebGL is good to go');
-    }
+export function main(gl) {
+    // const gl = document.querySelector("#canvas").getContext('webgl');
+    // if (!gl) {
+    //     console.log('WebGL unavailable');
+    // } else {
+    //     console.log('WebGL is good to go');
+    // }
 
     const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
 
@@ -277,7 +277,7 @@ function initShaderProgram(gl) {
 
 
 /* Draw the scene */
-function drawScene(gl, programInfo) {
+export function drawScene(gl, programInfo) {
     // Clear canvas
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

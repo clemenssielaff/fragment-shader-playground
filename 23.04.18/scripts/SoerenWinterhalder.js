@@ -4,7 +4,7 @@ const { mat4 } = glMatrix;
 
 //Time
 var then = 0;
-let time = 0.0;
+export let time = 0.0;
 
 //Grid setup
 const gridSize = 100; //gridSize * gridSize = amount of cells
@@ -23,14 +23,14 @@ let rotation = 0.0;
 
 // main();
 
-export function main() {
-  const canvas = document.getElementById("canvas");
-  const gl = canvas.getContext('webgl');
-  if (!gl) {
-    console.log('WebGL unavailable');
-  } else {
-    console.log('WebGL is good to go');
-  }
+export function main(gl) {
+  // const canvas = document.getElementById("canvas");
+  // const gl = canvas.getContext('webgl');
+  // if (!gl) {
+  //   console.log('WebGL unavailable');
+  // } else {
+  //   console.log('WebGL is good to go');
+  // }
 
   /*========== Shaders ==========*/
 
@@ -334,7 +334,7 @@ function loadShader(gl, type, source) {
 
 
 // Draw the scene.
-function drawScene(gl, programInfo, buffers, deltaTime) {
+export function drawScene(gl, programInfo, buffers, deltaTime) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
   gl.clearDepth(1.0);                 // Clear everything
   gl.enable(gl.DEPTH_TEST);           // Enable depth testing

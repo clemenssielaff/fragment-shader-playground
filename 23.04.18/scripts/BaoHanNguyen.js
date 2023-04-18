@@ -51,26 +51,26 @@ void main() {
 
 `;
 
-var time = 0.0;
+export let time = 0.0;
 
 function degToRad(grad) {
     return (grad / 180.0) * Math.PI;
 }
 
-export function main() {
-    const canvas = document.querySelector("#canvas");
-    if (!canvas) {
-        console.log("Canvas not avaiable");
-    } else {
-        console.log("Canvas is avaiable");
-    }
+export function main(gl) {
+    // const canvas = document.querySelector("#canvas");
+    // if (!canvas) {
+    //     console.log("Canvas not avaiable");
+    // } else {
+    //     console.log("Canvas is avaiable");
+    // }
 
-    const gl = canvas.getContext('webgl');
-    if (!gl) {
-        console.log("WebGL Context is not avaiable");
-    } else {
-        console.log("WebGL Context is avaiable");
-    }
+    // const gl = canvas.getContext('webgl');
+    // if (!gl) {
+    //     console.log("WebGL Context is not avaiable");
+    // } else {
+    //     console.log("WebGL Context is avaiable");
+    // }
 
     const shaderProgram = initShaderProgram(gl, vShaderSrc, fShaderSrc);
 
@@ -269,7 +269,7 @@ function initShaderProgram(gl) {
 
 }
 
-function drawScene(gl, programInfo) {
+export function drawScene(gl, programInfo) {
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

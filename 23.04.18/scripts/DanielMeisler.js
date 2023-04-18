@@ -12,24 +12,24 @@
 
 var cubeRotation = degToRad(45.0);
 var then = 0;
-let time = 0.0;
+export let time = 0.0;
 let time2 = 0.0;
 
 const { mat4 } = glMatrix;
 
 // main();
 
-export function main() {
+export function main(gl) {
     /*========== Create a WebGL Context ==========*/
     /** @type {HTMLCanvasElement} */
-    const canvas = document.querySelector("#canvas");
-    /** @type {WebGLRenderingContext} */
-    const gl = canvas.getContext('webgl');
-    if (!gl) {
-        console.log('WebGL unavailable');
-    } else {
-        console.log('WebGL is good to go');
-    }
+    // const canvas = document.querySelector("#canvas");
+    // /** @type {WebGLRenderingContext} */
+    // const gl = canvas.getContext('webgl');
+    // if (!gl) {
+    //     console.log('WebGL unavailable');
+    // } else {
+    //     console.log('WebGL is good to go');
+    // }
 
     /*========== Shaders ==========*/
 
@@ -385,7 +385,7 @@ function loadShader(gl, type, source) {
 //
 // Draw the scene.
 //
-function drawScene(gl, programInfo, buffers, deltaTime) {
+export function drawScene(gl, programInfo, buffers, deltaTime) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
     gl.clearDepth(1.0);                 // Clear everything
     gl.enable(gl.DEPTH_TEST);           // Enable depth testing

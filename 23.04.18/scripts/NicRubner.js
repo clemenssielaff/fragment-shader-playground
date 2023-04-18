@@ -86,7 +86,7 @@ const fragmentShaderSource = `
     }
 `;
 
-var time = 0.0;
+export let time = 0.0;
 
 // Utility functions ======================================================= //
 
@@ -96,14 +96,14 @@ function degToRad(grad) {
 
 //Main Function
 
-export function main() {
+export function main(gl) {
     //Get WebGL context
-    const gl = document.querySelector("#canvas").getContext('webgl');
-    if(!gl) {
-        console.log('WebGL unavailable');
-    } else {
-        console.log("WebGL is good to go!");
-    }
+    // const gl = document.querySelector("#canvas").getContext('webgl');
+    // if(!gl) {
+    //     console.log('WebGL unavailable');
+    // } else {
+    //     console.log("WebGL is good to go!");
+    // }
 
     //Initialize shader programm
     const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
@@ -365,7 +365,7 @@ function initShaderProgram(gl) {
 }
 
 /// Draw the scene.
-function drawScene(gl, programInfo) {
+export function drawScene(gl, programInfo) {
     // Clear the canvas before we start drawing on it.
     gl.uniform1f(programInfo.uniformLocations.time, time);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
