@@ -52,6 +52,9 @@ void main() {
 `;
 
 export let time = 0.0;
+export function setTime(t) {
+    time = t;
+}
 
 function degToRad(grad) {
     return (grad / 180.0) * Math.PI;
@@ -74,8 +77,14 @@ export function main(gl) {
 
     const shaderProgram = initShaderProgram(gl, vShaderSrc, fShaderSrc);
 
+    // Create empty buffers
+    const positionBuffer = createPositionBuffer(gl)
+    const colorBuffer = createColorBuffer(gl)
+    const indexBuffer = createIndexBuffer(gl)
+
     const programInfo = {
         program: shaderProgram,
+        indexBuffer: indexBuffer,
         attribLocations: {
             vertexPosition: gl.getAttribLocation(shaderProgram, 'aPosition'),
             vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
@@ -87,11 +96,6 @@ export function main(gl) {
         }
     };
 
-    // Create empty buffers
-    const positionBuffer = createPositionBuffer(gl)
-    const colorBuffer = createColorBuffer(gl)
-    const indexBuffer = createIndexBuffer(gl)
-
     // send points data to GPU & connect attributes with vertex shader
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
     gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0)
@@ -101,28 +105,30 @@ export function main(gl) {
     gl.vertexAttribPointer(programInfo.attribLocations.vertexColor, 4, gl.FLOAT, false, 0, 0)
     gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor)
 
-    // Unbind the position buffer (is not needed to draw)
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    // Bind the index buffer  
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.useProgram(programInfo.program);
+    return programInfo;
 
-    gl.clearColor(1.0, 1.0, 1.0, 1.0);
-    // clear everything
-    gl.clearDepth(1.0);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
+    // // Unbind the position buffer (is not needed to draw)
+    // gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    // // Bind the index buffer  
+    // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    // gl.useProgram(programInfo.program);
 
-    // Start the render loop
-    var last;
-    function render(now) {
-        drawScene(gl, programInfo);
-        const deltaTime = now - (last || now)
-        time += deltaTime / 1000.0
-        last = now
-        requestAnimationFrame(render)
-    }
-    requestAnimationFrame(render);
+    // gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    // // clear everything
+    // gl.clearDepth(1.0);
+    // gl.enable(gl.DEPTH_TEST);
+    // gl.depthFunc(gl.LEQUAL);
+
+    // // Start the render loop
+    // var last;
+    // function render(now) {
+    //     drawScene(gl, programInfo);
+    //     const deltaTime = now - (last || now)
+    //     time += deltaTime / 1000.0
+    //     last = now
+    //     requestAnimationFrame(render)
+    // }
+    // requestAnimationFrame(render);
 }
 
 function createPositionBuffer(gl) {
@@ -276,7 +282,7 @@ export function drawScene(gl, programInfo) {
     const projectionMatrix = mat4.create();
     mat4.perspective(projectionMatrix, degToRad(45), gl.canvas.clientWidth / gl.canvas.clientHeight, 0.1, 100.0);
 
-    const modelViewMatrix = mat4.create();
+    const modelViewMatrix = mat4.clone(programInfo.origin);
 
     // camera position
     mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, -4.0]); //  [displacement left/right, up/downm front/back]

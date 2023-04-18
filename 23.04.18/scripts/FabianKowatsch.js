@@ -1,9 +1,14 @@
- /*========== Define Global Variables ==========*/
+const { mat4 } = glMatrix;
+
+/*========== Define Global Variables ==========*/
 let colors = []
 let centroids = []
 let resolution = []
 let then = 0.0;
-export let time = 0.0
+export let time = 0.0;
+export function setTime(t) {
+    time = t;
+}
 const speed = 0.00003
 
 // main();
@@ -43,9 +48,11 @@ export function main(gl) {
     const vsSource = `
     precision mediump float;
     attribute vec4 aPosition;
+    uniform mat4 uProjectionMatrix;
+    uniform mat4 uModelViewMatrix;
             
     void main() {
-        gl_Position = aPosition;
+        gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
     }
 `;
 
@@ -112,12 +119,24 @@ export function main(gl) {
     gl.linkProgram(program);
     gl.useProgram(program);
 
+    // Create Index Buffer
+    const indices = [
+        0, 1, 2,
+        3, 4, 5
+    ];
+    const indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(indices), gl.STATIC_DRAW);
+
     const programInfo = {
         program: program,
+        indexBuffer: indexBuffer,
         attribLocations: {
             vertexPosition: gl.getAttribLocation(program, 'aPosition'),
         },
         uniformLocations: {
+            projectionMatrix: gl.getUniformLocation(program, 'uProjectionMatrix'),
+            modelViewMatrix: gl.getUniformLocation(program, 'uModelViewMatrix'),
             centroids: gl.getUniformLocation(program, 'uCentroids'),
             colors: gl.getUniformLocation(program, 'uColors'),
             time: gl.getUniformLocation(program, 'uTime'),
@@ -136,16 +155,17 @@ export function main(gl) {
     centroids = createRandomPoints(centroidCount)
     colors = createRandomColors(centroidCount);
 
+    return programInfo;
 
-    function render(now) {
-        now *= 0.001;  // convert to seconds
-        const deltaTime = now - then;
-        then = now;
-        drawScene(gl, programInfo, now);
+    // function render(now) {
+    //     now *= 0.001;  // convert to seconds
+    //     const deltaTime = now - then;
+    //     then = now;
+    //     drawScene(gl, programInfo, now);
 
-        requestAnimationFrame(render);
-    }
-    requestAnimationFrame(render);
+    //     requestAnimationFrame(render);
+    // }
+    // requestAnimationFrame(render);
 
 }
 
@@ -166,7 +186,7 @@ function createRandomColors(count) {
 }
 
 
-export function drawScene(gl, programInfo, deltaTime) {
+export function drawScene(gl, programInfo) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
@@ -177,20 +197,41 @@ export function drawScene(gl, programInfo, deltaTime) {
 
     // Tell WebGL to use our program when drawing  
     gl.useProgram(programInfo.program);
+    
+    let  projectionMatrix = mat4.create();
+    mat4.perspective(
+        projectionMatrix,
+        (45.0 / 180.0) * Math.PI,                       // field of view in radians
+        gl.canvas.clientWidth / gl.canvas.clientHeight, // aspect ratio
+        0.1,                                            // near clipping plane                  
+        100.0                                           // far clipping plane
+    );
+    const modelViewMatrix = mat4.clone(programInfo.origin);    
+    mat4.translate(
+        modelViewMatrix,   // destination matrix
+        modelViewMatrix,   // matrix to translate
+        [0.0, 0.0, -3.0]); // amount to translate
 
     // Set the shader uniforms  
-
-    gl.uniform1f(programInfo.uniformLocations.time, time);
+    gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
+    gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix);
+    gl.uniform1f(programInfo.uniformLocations.time, time * 1000.);
     gl.uniform1f(programInfo.uniformLocations.speed, speed);
     gl.uniform3fv(programInfo.uniformLocations.colors, new Float32Array(colors));
     gl.uniform2fv(programInfo.uniformLocations.centroids, new Float32Array(centroids));
     gl.uniform2fv(programInfo.uniformLocations.resolution, new Float32Array(resolution));
 
     // Draw the points on the screen
-    const mode = gl.TRIANGLES;
-    const first = 0;
-    const count = 6;
-    gl.drawArrays(mode, first, count);
+    // const mode = gl.TRIANGLES;
+    // const first = 0;
+    // const count = 6;
+    // gl.drawArrays(mode, first, count);
+    gl.drawElements(
+        gl.TRIANGLES,       // primitive type
+        6,                  // vertex count
+        gl.UNSIGNED_SHORT,  // type of indices 
+        0                   // offset
+    );
 
-    time += deltaTime;
+    // time += deltaTime;
 }

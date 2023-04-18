@@ -46,6 +46,9 @@ void main(){
  * Time in seconds
  */
 export let time = 0.0;
+export function setTime(t) {
+    time = t;
+}
 
 
 // Utility functions ======================================================= //
@@ -99,12 +102,18 @@ export function main(gl) {
     // for the vertices and so forth is established.
     const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
 
+    // Initialize the geometry in vertex buffer objects 
+    const positionBuffer = createPositionBuffer(gl)
+    const colorBuffer = createColorBuffer(gl)
+    const indexBuffer = createIndexBuffer(gl)
+
     // Collect all the info needed to use the shader program.
     // Look up which attributes our shader program is using
     // for aVertexPosition, aVertexColor and also
     // look up uniform locations.
     const programInfo = {
         program: shaderProgram,
+        indexBuffer: indexBuffer,
         attribLocations: {
             vertexPosition: gl.getAttribLocation(shaderProgram, 'aPosition'),
             vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
@@ -115,11 +124,6 @@ export function main(gl) {
             deltaTime: gl.getUniformLocation(shaderProgram, "deltaTime")
         }
     };
-
-    // Initialize the geometry in vertex buffer objects 
-    const positionBuffer = createPositionBuffer(gl)
-    const colorBuffer = createColorBuffer(gl)
-    const indexBuffer = createIndexBuffer(gl)
 
     // Tell WebGL how to pull out the positions from the position
     // buffer into the vertexPosition attribute of the vertex shader
@@ -147,26 +151,28 @@ export function main(gl) {
     )
     gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor)
 
-    // Prepare the OpenGL state machine
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);   // Unbind the position buffer (is not needed to draw)
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,  // Bind the index buffer
-        indexBuffer);
-    gl.useProgram(programInfo.program);     // Use the shader program
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);      // Clear to black, fully opaque
-    gl.clearDepth(1.0);                     // Clear everything
-    gl.enable(gl.DEPTH_TEST);               // Enable depth testing
-    gl.depthFunc(gl.LEQUAL);                // Near things obscure far things
+    return programInfo;
 
-    // Start the render loop
-    var last;
-    function render (now){
-        const deltaTime = now - (last || now)
-        time += deltaTime / 1000.0
-        last = now
-        drawScene(gl, programInfo, deltaTime, time, now, last);
-        requestAnimationFrame (render);
-    }
-    requestAnimationFrame (render);
+    // // Prepare the OpenGL state machine
+    // gl.bindBuffer(gl.ARRAY_BUFFER, null);   // Unbind the position buffer (is not needed to draw)
+    // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,  // Bind the index buffer
+    //     indexBuffer);
+    // gl.useProgram(programInfo.program);     // Use the shader program
+    // gl.clearColor(0.0, 0.0, 0.0, 1.0);      // Clear to black, fully opaque
+    // gl.clearDepth(1.0);                     // Clear everything
+    // gl.enable(gl.DEPTH_TEST);               // Enable depth testing
+    // gl.depthFunc(gl.LEQUAL);                // Near things obscure far things
+
+    // // Start the render loop
+    // var last;
+    // function render (now){
+    //     const deltaTime = now - (last || now)
+    //     time += deltaTime / 1000.0
+    //     last = now
+    //     drawScene(gl, programInfo, deltaTime, time, now, last);
+    //     requestAnimationFrame (render);
+    // }
+    // requestAnimationFrame (render);
 }
 
 
@@ -333,7 +339,13 @@ function initShaderProgram(gl) {
 
 
 /// Draw the scene.
-export function drawScene(gl, programInfo, deltaTime, time, now, last) {
+let lastTime;
+let deltaTime
+export function drawScene(gl, programInfo) {
+    const now = performance.now();
+    deltaTime = now - (lastTime || now);
+    lastTime = now;
+
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -354,7 +366,7 @@ export function drawScene(gl, programInfo, deltaTime, time, now, last) {
 
     // Set the drawing position to the "identity" point, which is
     // the center of the scene.
-    const modelViewMatrix = mat4.create();
+    const modelViewMatrix = mat4.clone(programInfo.origin);
 
     // Move the cube back from the camera
     mat4.translate(

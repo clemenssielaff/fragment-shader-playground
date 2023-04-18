@@ -5,6 +5,9 @@ const { mat4 } = glMatrix;
 //Time
 var then = 0;
 export let time = 0.0;
+export function setTime(t) {
+    time = t;
+}
 
 //Grid setup
 const gridSize = 100; //gridSize * gridSize = amount of cells
@@ -181,8 +184,12 @@ export function main(gl) {
 
   const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
 
+  // Initialize the geometry in vertex buffer objects 
+  const buffers = initBuffers(gl);
+
   const programInfo = {
     program: shaderProgram,
+    indexBuffer: buffers.indices,
     attribLocations: {
       vertexPosition: gl.getAttribLocation(shaderProgram, 'aPosition'),
       vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
@@ -198,9 +205,6 @@ export function main(gl) {
       radiusVariance: gl.getUniformLocation(shaderProgram, 'uRadiusVariance'),
     }
   };
-
-  // Initialize the geometry in vertex buffer objects 
-  const buffers = initBuffers(gl);
 
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute
@@ -222,17 +226,19 @@ export function main(gl) {
       programInfo.attribLocations.vertexPosition);
   }
 
-  // Draw the scene repeatedly
-  function render(now) {
-    now *= 0.001;  // convert to seconds
-    const deltaTime = now - then;
-    then = now;
+  return programInfo;
 
-    drawScene(gl, programInfo, buffers, deltaTime);
+  // // Draw the scene repeatedly
+  // function render(now) {
+  //   now *= 0.001;  // convert to seconds
+  //   const deltaTime = now - then;
+  //   then = now;
 
-    requestAnimationFrame(render);
-  }
-  requestAnimationFrame(render);
+  //   drawScene(gl, programInfo, buffers, deltaTime);
+
+  //   requestAnimationFrame(render);
+  // }
+  // requestAnimationFrame(render);
 
 }
 
@@ -334,7 +340,7 @@ function loadShader(gl, type, source) {
 
 
 // Draw the scene.
-export function drawScene(gl, programInfo, buffers, deltaTime) {
+export function drawScene(gl, programInfo, deltaTime) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
   gl.clearDepth(1.0);                 // Clear everything
   gl.enable(gl.DEPTH_TEST);           // Enable depth testing
@@ -367,7 +373,7 @@ export function drawScene(gl, programInfo, buffers, deltaTime) {
 
   // Set the drawing position to the "identity" point, which is
   // the center of the scene.
-  const modelViewMatrix = mat4.create();
+  const modelViewMatrix = mat4.clone(programInfo.origin);
 
 
   mat4.translate(modelViewMatrix,     // destination matrix
@@ -381,15 +387,11 @@ export function drawScene(gl, programInfo, buffers, deltaTime) {
 
   mat4.rotate(modelViewMatrix,  // destination matrix
     modelViewMatrix,  // matrix to rotate
-    -rotation * 0.7,// amount to rotate in radians
+    time * rotationSpeed * -0.7,// amount to rotate in radians
     [0, 1, 0]);       // axis to rotate around (X)
   mat4.translate(modelViewMatrix,     // destination matrix
     modelViewMatrix,     // matrix to translate
     [-0.5, -0.5, -0.5]);  // amount to translate
-
-
-  // Tell WebGL which indices to use to index the vertices
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
 
   // Tell WebGL to use our program when drawing  
   gl.useProgram(programInfo.program);
@@ -429,9 +431,9 @@ export function drawScene(gl, programInfo, buffers, deltaTime) {
     gl.drawElements(gl.TRIANGLES, count, type, offset);
   }
 
-  // Update the rotation for the next draw
-  rotation += deltaTime * rotationSpeed;
-  time += deltaTime;
+  // // Update the rotation for the next draw
+  // rotation += deltaTime * rotationSpeed;
+  // time += deltaTime;
 }
 
 function degToRad(grad) {

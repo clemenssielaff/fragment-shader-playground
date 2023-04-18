@@ -86,6 +86,9 @@ void main() {
 `;
 
 export let time = 0.0;
+export function setTime(t) {
+    time = t;
+}
 
 
 // Utility functions ======================================================= //
@@ -116,9 +119,16 @@ export function main(gl) {
     // for the vertices and so forth is established.
     const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
 
+    // Initialize the geometry in vertex buffer objects 
+    const positionBuffer = createPositionBuffer(gl)
+    const normalBuffer = createNormalBuffer(gl)
+    const textureBuffer = createTextureBuffer(gl)
+    const indexBuffer = createIndexBuffer(gl)
+
     // Collect all the info needed to use the shader program.
     const programInfo = {
         program: shaderProgram,
+        indexBuffer: indexBuffer,
         attribLocations: {
             vertexPosition: gl.getAttribLocation(shaderProgram, 'aPosition'),
             textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
@@ -132,12 +142,6 @@ export function main(gl) {
             uSampler: gl.getUniformLocation(shaderProgram, "uSampler"),
         }
     };
-
-    // Initialize the geometry in vertex buffer objects 
-    const positionBuffer = createPositionBuffer(gl)
-    const normalBuffer = createNormalBuffer(gl)
-    const textureBuffer = createTextureBuffer(gl)
-    const indexBuffer = createIndexBuffer(gl)
 
     // Load texture
     const texture = loadTexture(gl, "assets/brick_texture.jpg"); 
@@ -181,26 +185,37 @@ export function main(gl) {
     )
     gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord)
 
-    // Prepare the OpenGL state machine
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);   // Unbind the position buffer (is not needed to draw)
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,  // Bind the index buffer
-        indexBuffer);
-    gl.useProgram(programInfo.program);     // Use the shader program
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);      // Clear to black, fully opaque
-    gl.clearDepth(1.0);                     // Clear everything
-    gl.enable(gl.DEPTH_TEST);               // Enable depth testing
-    gl.depthFunc(gl.LEQUAL);                // Near things obscure far things
+    //texture:
+    gl.useProgram(shaderProgram);
+    // Tell WebGL we want to affect texture unit 0
+    gl.activeTexture(gl.TEXTURE0);
+    // Bind the texture to texture unit 0
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    // Tell the shader we bound the texture to texture unit 0
+    gl.uniform1i(programInfo.uniformLocations.uSampler, 0)
 
-    // Start the render loop
-    var last;
-    function render(now) {
-        drawScene(gl, programInfo, texture);
-        const deltaTime = now - (last || now)
-        time += deltaTime / 1000.0
-        last = now
-        requestAnimationFrame(render)
-    }
-    requestAnimationFrame(render);
+    return programInfo;
+
+    // // Prepare the OpenGL state machine
+    // gl.bindBuffer(gl.ARRAY_BUFFER, null);   // Unbind the position buffer (is not needed to draw)
+    // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,  // Bind the index buffer
+    //     indexBuffer);
+    // gl.useProgram(programInfo.program);     // Use the shader program
+    // gl.clearColor(0.0, 0.0, 0.0, 1.0);      // Clear to black, fully opaque
+    // gl.clearDepth(1.0);                     // Clear everything
+    // gl.enable(gl.DEPTH_TEST);               // Enable depth testing
+    // gl.depthFunc(gl.LEQUAL);                // Near things obscure far things
+
+    // // Start the render loop
+    // var last;
+    // function render(now) {
+    //     drawScene(gl, programInfo, texture);
+    //     const deltaTime = now - (last || now)
+    //     time += deltaTime / 1000.0
+    //     last = now
+    //     requestAnimationFrame(render)
+    // }
+    // requestAnimationFrame(render);
 }
 
 
@@ -459,7 +474,7 @@ function initShaderProgram(gl) {
 
 
 /// Draw the scene.
-export function drawScene(gl, programInfo, texture) {
+export function drawScene(gl, programInfo) {
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -481,7 +496,7 @@ export function drawScene(gl, programInfo, texture) {
 
     // Set the drawing position to the "identity" point, which is
     // the center of the scene.
-    const modelViewMatrix = mat4.create();
+    const modelViewMatrix = mat4.clone(programInfo.origin);
 
     //Initialize the normal matrix
     const normalMatrix = mat4.create();
@@ -522,14 +537,6 @@ export function drawScene(gl, programInfo, texture) {
         programInfo.uniformLocations.normalMatrix,
         false,
         normalMatrix);
-
-    //texture:
-    // Tell WebGL we want to affect texture unit 0
-    gl.activeTexture(gl.TEXTURE0);
-    // Bind the texture to texture unit 0
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    // Tell the shader we bound the texture to texture unit 0
-    gl.uniform1i(programInfo.uniformLocations.uSampler, 0)
 
     gl.uniformMatrix4fv(
         programInfo.uniformLocations.modelViewMatrix,
