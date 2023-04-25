@@ -6,13 +6,14 @@
 const { mat4 } = glMatrix;
 
 // Constants
-const gridResolution = 100;     // gridResolution^2 = amount of cells
+const gridResolution = 255;     // gridResolution^2 = amount of cells
+const gridExtend = 15.0;        // Extend of the grid in units
 const tilt = 0.6;               // Tilt of the grid in radians
 const timeScale = 0.36;         // Time scale
 const rotationSpeed = 0.8;      // Rotation speed in degrees per second
 const moveSpeed = 6.0;          // Move speed in units per second
 const minDistance = 5.0;        // Minimum distance to the grid
-const maxDistance = 50.0;       // Maximum distance to the grid
+const maxDistance = 40.0;       // Maximum distance to the grid
 const shiftAcceleration = 4.0;  // Acceleration factor when shift is pressed
 
 // User input state
@@ -23,6 +24,7 @@ let downArrowPressed = false;
 let shiftPressed = false;
 
 
+/// The main function, called when the page is loaded.
 async function main() {
   // Get the WebGL context from the canvas element in the DOM
   const gl = document.querySelector("#canvas").getContext('webgl');
@@ -103,7 +105,7 @@ function createProgramInfo(gl, vertexShaderSource, fragmentShaderSource) {
   }
 
   // Generate the geometry buffers.
-  const {positionBuffer, indexBuffer} = createGridPositionBuffers(gl, gridResolution, 0.25); // TODO: calculate cell size from resolution and extend
+  const {positionBuffer, indexBuffer} = createGridBuffers(gl);
 
   // Define the programInfo object with all the information needed to render the scene.
   const programInfo = {
@@ -133,44 +135,29 @@ function createProgramInfo(gl, vertexShaderSource, fragmentShaderSource) {
 }
 
 
-/// Creates a grid of cells with the given size and cell size.
-/// Returns a position buffer and an index buffer.
-function createGridPositionBuffers(gl, resolution, cellSize) {
-  
-  // Create the grid
+/// Returns the position and index buffer for a regular grid.
+function createGridBuffers(gl) 
+{
+  const startPos = gridExtend / -2;
+  const stepSize = gridExtend / gridResolution;
+
   let positions = []
   let indices = []
-  for (let x = 0; x < resolution; x++) {
-    for (let z = 0; z < resolution; z++) {
-      const x_cell = x * cellSize - resolution / 2 * cellSize
-      const z_cell = z * cellSize - resolution / 2 * cellSize
+  for (let col = 0; col <= gridResolution; col++) {
+    const x = startPos + col * stepSize;
+    for (let row = 0; row <= gridResolution; row++) {
 
-      positions.push(x_cell)
-      positions.push(0.0)
-      positions.push(z_cell)
+      // Add the position
+      const z = startPos + row * stepSize;
+      positions.push(x, 0, z);
 
-      positions.push(x_cell + cellSize)
-      positions.push(0.0)
-      positions.push(z_cell)
-
-      positions.push(x_cell + cellSize)
-      positions.push(0.0)
-      positions.push(z_cell + cellSize)
-
-      positions.push(x_cell)
-      positions.push(0.0)
-      positions.push(z_cell + cellSize)
-
-      let xz = z + (x * resolution)
-      let xz4 = xz * 4
-      let xz6 = xz * 6
-
-      indices[xz6 + 0] = xz4
-      indices[xz6 + 1] = xz4 + 1
-      indices[xz6 + 2] = xz4 + 2
-      indices[xz6 + 3] = xz4
-      indices[xz6 + 4] = xz4 + 2
-      indices[xz6 + 5] = xz4 + 3
+      // Add the indices
+      if (col == gridResolution || row == gridResolution) {
+        continue;
+      }
+      const currentIndex = row * (gridResolution + 1) + col;
+      indices.push(currentIndex, currentIndex + 1, currentIndex + gridResolution + 1);
+      indices.push(currentIndex + gridResolution + 1, currentIndex + 1, currentIndex + gridResolution + 2);
     }
   }
 
@@ -223,7 +210,7 @@ export function drawScene(gl, programInfo, distance, rotation, time) {
   // Draw the scene.
   gl.drawElements(
     gl.TRIANGLES,                         // primitive type
-    6 * gridResolution * gridResolution,  // number of indices to use
+    gridResolution * gridResolution * 6,  // number of indices to use
     gl.UNSIGNED_SHORT,                    // the data type of each index
     0);                                   // offset in the index buffer
 }

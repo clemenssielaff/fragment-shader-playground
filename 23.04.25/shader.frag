@@ -4,8 +4,15 @@ varying vec3 vGridPos;
 
 uniform float uTime;
 
+// const vec3 lightDirection = vec3(0.7071067811865476, -0.7071067811865476, 0.0);
+const float PI = 3.1415926535897932384626433832795;
+
 float random (in vec2 st) {
   return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+float degToRad(in float grad) {
+    return (grad / 180.0) * PI;
 }
 
 float noise (in vec2 st) {
@@ -40,35 +47,50 @@ float checkLevel(float lowerBound, float upperBound, float y) {
   return step(lowerBound, y) * step(y, upperBound);
 }
 
+mat4 rotateX(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    
+    return mat4(
+        1.0, 0.0, 0.0, 0.0,
+        0.0, c, -s, 0.0,
+        0.0, s, c, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    );
+}
+
+mat4 rotateY(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    
+    return mat4(
+        c, 0.0, s, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        -s, 0.0, c, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    );
+}
+
 void main() {
     //Define lower bounds of levels
-    float levelOffset = noise(vGridPos.xy * 5.0) * 0.08;
     float waterLevel = -0.1;
     float sandLevel = 0.02; 
-    float grass1Level = .07 + levelOffset;
-    float grass2Level = .2 + levelOffset;
-    float rock1Level = .3 + levelOffset;
-    float rock2Level = .5 + levelOffset;
-    float snowLevel = 0.75 + levelOffset;
+    float grassLevel = .07 + noise((vGridPos.xy + vec2(0.0)) * 10.0) * 0.05;
+    float rockLevel = .2 + noise((vGridPos.xy + vec2(5.0)) * 10.0) * 0.05;
+    float snowLevel = .5 + noise((vGridPos.xy + vec2(8.0)) * 10.0) * 0.05;
 
-    //Water
+    // Water
     vec3 col = checkLevel(waterLevel, sandLevel, vGridPos.y) * water(vGridPos);
-    //Sand
-    col += checkLevel(sandLevel, grass1Level, vGridPos.y) * vec3(0.8, 0.8, 0.5);
-    //Grass1
-    col += checkLevel(grass1Level, grass2Level, vGridPos.y) * vec3(.3, .6, .05);
-    //Grass 2
-    col += checkLevel(grass2Level, rock1Level, vGridPos.y) * vec3(.25, .35, .0);
-    //Rock 1
-    col += checkLevel(rock1Level, rock2Level, vGridPos.y) * vec3(.35, .25, .23);
-    //Rock 2
-    col += checkLevel(rock2Level, snowLevel, vGridPos.y) * vec3(.3, .2, .2);
-    //Snow
+    // Sand
+    col += checkLevel(sandLevel, grassLevel, vGridPos.y) * vec3(0.8, 0.8, 0.5);
+    // Grass
+    col += checkLevel(grassLevel, rockLevel, vGridPos.y) * vec3(.3, .6, .05);
+    // Rock
+    col += checkLevel(rockLevel, snowLevel, vGridPos.y) * vec3(.35, .25, .23);
+    // Snow
     col += checkLevel(snowLevel, 1.0, vGridPos.y) * vec3(.9);
-   
-    //Detail / Color variance
+    // Detail / Color variance
     col += ((noise(vGridPos.xz * 10.0) + noise(vGridPos.xz * 30.0) - 1.0)* 0.1);
 
-    //Set final color
     gl_FragColor = vec4(col, 1.0);
 }
