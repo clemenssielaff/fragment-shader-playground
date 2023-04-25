@@ -7,6 +7,8 @@ uniform mat4 uProjectionMatrix;
 uniform float uTime;
 
 varying vec3 vGridPos;
+varying vec3 vNormal;
+varying vec4 vViewPos;
 
 const float ISLAND_SIZE = 3.0;      // Radius
 const float RADIUS_VARIANCE = 5.0;  // Noise strength applied to radius, weird results if > islandSize * 2
@@ -43,12 +45,25 @@ float calculateHeight(vec2 pos) {
     return (shapeNoise * NOISE_RATIO + detailNoise * (1.0 - NOISE_RATIO)) * islandMask;
 }
 
+vec3 calculateNormal(vec3 p0, vec3 p1, vec3 p2) {
+    vec3 v1 = p1 - p0;
+    vec3 v2 = p2 - p0;
+    return normalize(cross(v1, v2));
+}
+
 void main() {
     // Calculate the height of the grid point
     vec4 pos = aPosition;
     pos.y = calculateHeight(pos.xz);
     vGridPos = pos.xyz;
+
+    // Calculate the normal of the grid point
+    vec3 p1 = vec3(aPosition.x + 0.1, calculateHeight(pos.xz + vec2(0.1, 0)), aPosition.z);
+    vec3 p2 = vec3(aPosition.x, calculateHeight(pos.xz + vec2(0, 0.1)), aPosition.z + 0.1);
+    vNormal = calculateNormal(pos.xyz, p1, p2);
+    
     // Scale the height of the vertex before placing it in the world
     pos.y *= HEIGHT_SCALE;
-    gl_Position = uProjectionMatrix * uModelViewMatrix * pos;
+    vViewPos = uModelViewMatrix * pos;
+    gl_Position = uProjectionMatrix * vViewPos;
 }

@@ -1,10 +1,11 @@
 precision mediump float;
 
 varying vec3 vGridPos;
+varying vec3 vNormal;
+varying vec4 vViewPos;
 
 uniform float uTime;
 
-// const vec3 lightDirection = vec3(0.7071067811865476, -0.7071067811865476, 0.0);
 const float PI = 3.1415926535897932384626433832795;
 
 float random (in vec2 st) {
@@ -92,5 +93,25 @@ void main() {
     // Detail / Color variance
     col += ((noise(vGridPos.xz * 10.0) + noise(vGridPos.xz * 30.0) - 1.0)* 0.1);
 
-    gl_FragColor = vec4(col, 1.0);
+    // Ambient term
+    const float ambientFactor = 0.2;
+    vec3 ambient = ambientFactor * col;
+
+    // Diffuse term
+    mat4 lightTilt = rotateX(degToRad(15.0));
+    // mat4 lightPan = rotateY(degToRad(uTime * 180. * 0.8));
+    mat4 lightPan = rotateY(degToRad(-45.0));
+    vec3 lightDirection = (lightPan * lightTilt * vec4(0, 0, -1, 1)).xyz;
+    float diffuseFactor = clamp(dot(vNormal, lightDirection), 0.0, 1.0);
+    vec3 diffuse = diffuseFactor * col;
+
+    // Specular term
+    const float shininess = 32.0;
+    vec3 viewDirection = normalize(-vViewPos.xyz);
+    vec3 reflectionDirection = reflect(-lightDirection, vNormal);
+    float specularFactor = pow(max(dot(reflectionDirection, viewDirection), 0.0), shininess);
+    vec3 specular = specularFactor * col;
+
+    //Set final color
+    gl_FragColor = vec4(ambient + diffuse + specular, 1.0);
 }
