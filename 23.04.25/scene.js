@@ -6,7 +6,7 @@
 const { mat4 } = glMatrix;
 
 // Constants
-const gridResolution = 255;     // gridResolution^2 = amount of cells
+const gridResolution = 256;     // gridResolution^2 = amount of cells
 const gridExtend = 15.0;        // Extend of the grid in units
 const tilt = 0.6;               // Tilt of the grid in radians
 const timeScale = 0.36;         // Time scale

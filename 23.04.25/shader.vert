@@ -45,25 +45,23 @@ float calculateHeight(vec2 pos) {
     return (shapeNoise * NOISE_RATIO + detailNoise * (1.0 - NOISE_RATIO)) * islandMask;
 }
 
-vec3 calculateNormal(vec3 p0, vec3 p1, vec3 p2) {
-    vec3 v1 = p1 - p0;
-    vec3 v2 = p2 - p0;
-    return normalize(cross(v1, v2));
-}
-
 void main() {
     // Calculate the height of the grid point
     vec4 pos = aPosition;
     pos.y = calculateHeight(pos.xz);
     vGridPos = pos.xyz;
 
-    // Calculate the normal of the grid point
-    vec3 p1 = vec3(aPosition.x + 0.1, calculateHeight(pos.xz + vec2(0.1, 0)), aPosition.z);
-    vec3 p2 = vec3(aPosition.x, calculateHeight(pos.xz + vec2(0, 0.1)), aPosition.z + 0.1);
-    vNormal = calculateNormal(pos.xyz, p1, p2);
-    
     // Scale the height of the vertex before placing it in the world
     pos.y *= HEIGHT_SCALE;
+
+    // Calculate the normal of the grid point
+    vec3 p1 = vec3(pos.x + 0.01, calculateHeight(pos.xz + vec2(0.01, 0)) * HEIGHT_SCALE, pos.z);
+    vec3 p2 = vec3(pos.x, calculateHeight(pos.xz + vec2(0, 0.01)) * HEIGHT_SCALE, pos.z + 0.01);
+    vec3 v1 = p1 - pos.xyz;
+    vec3 v2 = p2 - pos.xyz;
+    vNormal = normalize(cross(v1, v2));
+
+    // View and gl position    
     vViewPos = uModelViewMatrix * pos;
     gl_Position = uProjectionMatrix * vViewPos;
 }
