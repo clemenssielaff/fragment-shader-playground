@@ -22,7 +22,8 @@
 				"jpsnee.vscode-editor-macros",
 				"ow.vscode-subword-navigation",
 				"russelldavis.better-pageup-pagedown",
-				"ms-vsliveshare.vsliveshare"
+				"ms-vsliveshare.vsliveshare",
+				"dtoplak.vscode-glsllint"
 			]
 		}
 	},

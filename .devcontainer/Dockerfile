@@ -22,6 +22,8 @@ RUN apt-get install -y software-properties-common curl sudo
 # fish shell
 RUN apt-add-repository -y ppa:fish-shell/release-3
 RUN apt-get update
+# nodejs v18.x
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
 
 # Use local user "vscode" instead of root
 # See https://aka.ms/vscode-remote/containers/non-root
@@ -37,9 +39,14 @@ RUN usermod --shell /usr/bin/fish $USERNAME
 # Install development tools
 RUN apt-get install -y git
 RUN apt-get install -y neovim
+RUN apt-get install -y glslang-tools
+RUN apt-get install -y nodejs
 
 # apt cleanup
 RUN apt-get autoclean
+
+# Update npm
+RUN npm install -g npm
 
 # Run as non-root user
 USER $USERNAME
@@ -47,6 +54,10 @@ USER $USERNAME
 # Ensure the .config and .local folder exists, because we want to mount into it
 RUN mkdir /home/$USERNAME/.config/
 RUN mkdir -p /home/$USERNAME/.local/share/
+
+# Setup git
+RUN git config --global user.name "Clemens Sielaff"
+RUN git config --global user.email "git@clemens-sielaff.com"
 
 # Tell git to use VSCode as the default editor
 RUN git config --global diff.tool vscode
