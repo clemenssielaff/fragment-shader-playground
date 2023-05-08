@@ -2,7 +2,7 @@
 //  https://github.com/JoeyDeVries/LearnOpenGL/blob/master/src/6.pbr/2.2.2.ibl_specular_textured/ibl_specular_textured.cpp
 
 
-const { mat4 } = glMatrix;
+const { vec3, mat3, mat4 } = glMatrix;
 
 
 // Constants
@@ -21,7 +21,7 @@ let lastFrame = 0.;
 
 
 /// The main function, called when the page is loaded.
-async function main2() {
+async function main_orig_prb() {
   // Get the WebGL context from the canvas element in the DOM.
   const gl = document.querySelector("#canvas").getContext('webgl2');
   if (!gl) {
@@ -148,7 +148,7 @@ async function main2() {
 }
 
 
-async function main() {
+async function main_test() {
   // Get the WebGL context from the canvas element in the DOM.
   const gl = document.querySelector("#canvas").getContext('webgl2');
   if (!gl) {
@@ -224,8 +224,8 @@ async function main() {
     quadEntity.indexBuffer,
     greyscaleShader,
   );
-  const boxEntity = createBox(gl, 
-    "Box", 
+  const geoEntity = createSphere(gl, 
+    "Geo Entity", 
     flatShader, 
     {
       texCoordAttribute: "aTexCoord",
@@ -236,6 +236,9 @@ async function main() {
   gl.clearColor(0.0, 0.0, 0.0, 1.0); // Set clear color to black, fully opaque
   gl.enable(gl.DEPTH_TEST);   // Enable depth testing.
   gl.depthFunc(gl.LEQUAL);    // Set depth function to less than AND equal for skybox depth trick.
+  // Enable backface culling.
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
 
   // Create a perspective projection matrix.
   const projectionMatrix = mat4.create();
@@ -247,26 +250,26 @@ async function main() {
     100);                     // far clipping plane
   
   // Define static uniforms.
-  boxEntity.uniform.uProjectionMatrix = projectionMatrix;
-  boxEntity.uniform.uTexture = texture;
+  geoEntity.uniform.uProjectionMatrix = projectionMatrix;
+  geoEntity.uniform.uTexture = texture;
 
-  function updateBox() {
+  function updateGeo() {
     // Position the model in front of the camera.
     const modelViewMatrix = mat4.create();
     mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -5]);
     mat4.rotate(modelViewMatrix, modelViewMatrix, 0.6, [1, 0, 0]);
 
-    boxEntity.uniform.uModelViewMatrix = modelViewMatrix;
+    geoEntity.uniform.uModelViewMatrix = modelViewMatrix;
   }
 
   function render(now) {
-    updateBox();
+    updateGeo();
 
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     offscreenFramebuffer.use();
-    boxEntity.render();
+    geoEntity.render();
     offscreenFramebuffer.unuse();
 
     greyscaleFramebuffer.use();
@@ -276,12 +279,105 @@ async function main() {
     quadEntity.render();
 
     // Call render() again next frame.
-    requestAnimationFrame(render);
+    // requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
 
 }
-main();
+
+async function main() {
+  // Get the WebGL context from the canvas element in the DOM.
+  const gl = document.querySelector("#canvas").getContext('webgl2');
+  if (!gl) {
+      console.log('WebGL unavailable');
+  } else {
+      console.log('WebGL is good to go');
+  }
+
+  // Create uniform constants
+  const aspectRatio = gl.canvas.clientWidth / gl.canvas.clientHeight;
+  const projectionMatrix = mat4.create();
+  mat4.perspective(projectionMatrix,
+    0.7853981633974483, // 45deg field of view in radians
+    aspectRatio,        // aspect ratio
+    0.1,                // near clipping plane
+    100,                // far clipping plane
+  );
+  
+  const lightPositions = [
+    vec3.fromValues(-10,  10, 10),
+    vec3.fromValues( 10,  10, 10),
+    vec3.fromValues(-10, -10, 10),
+    vec3.fromValues( 10, -10, 10),
+  ]
+  
+  const lightColors = [
+    vec3.fromValues(300, 300, 300),
+    vec3.fromValues(300, 300, 300),
+    vec3.fromValues(300, 300, 300),
+    vec3.fromValues(300, 300, 300),
+  ]
+
+  // Create the shaders.
+  const pbrShader = await createShader(gl,
+    "PBR Shader",                   // name
+    "pbr1.vert",                    // vertex shader source file
+    "pbr1.frag",                    // fragment shader source file
+    [                               // attributes
+      "aPosition",
+      "aNormal",
+    ], {                            // uniforms
+      "uProjectionMatrix": {
+          type: "mat4",
+          value: projectionMatrix
+      },
+     "uViewMatrix": {
+          type: "mat4",
+          value: mat4.create()
+      },
+     "uModelMatrix": {
+          type: "mat4",
+          value: mat4.create()
+      },
+     "uNormalMatrix": {
+          type: "mat3",
+          value: mat3.create()
+      },
+      "uAlbedo": {
+          type: "vec3",
+          value: vec3.fromValues(.5, 0, 0)
+      },
+      "uMetallic": {
+          type: "float",
+          value: 0.0
+      },
+      "uRoughness": {
+          type: "float",
+          value: 0.0
+      },
+      "uAmbientOcclusion": {
+          type: "float",
+          value: 1.0
+      },
+      "uLightPositions": {
+          type: "vec3",
+          value: lightPositions
+      },
+      "uLightColors": {
+          type: "vec3",
+          value: lightColors
+      },
+      "uCamPos": {
+          type: "vec3",
+          value: vec3.create()
+      },
+    });
+
+  // Prepare the OpenGL state machine
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Set clear color to black, fully opaque
+  gl.enable(gl.DEPTH_TEST);           // Enable depth testing.
+}
+main_test();
 
 
 // =============================================================================
@@ -483,7 +579,7 @@ function createBox(gl, name, shader, options={})
     16, 17, 18,   16, 18, 19,  // right
     20, 21, 22,   20, 22, 23,  // left
   ];
-  const indexBuffer = createIndexBuffer(gl, new Uint16Array(indices));
+  const indexBuffer = createIndexBuffer(gl, indices);
 
   // If the shader program contains a normal attribute, we can generate normals.
   const normalAttribute = options.normalAttribute || null;
@@ -517,6 +613,117 @@ function createBox(gl, name, shader, options={})
   }
 
   // Create the box entity.
+  return createEntity(gl, name, vertexBuffers, indexBuffer, shader);
+}
+
+
+/// Creates a sphere around the origin with the given options.
+/// @param gl The WebGL context.
+/// @param name The name of the sphere entity.
+/// @param shader The shader program to use for rendering.
+/// @param options An object containing the following optional properties:
+///   - radius: The radius of the sphere. Default: 1.0.
+///   - latitudeBands: The number of latitude bands. Default: 32.
+///   - longitudeBands: The number of longitude bands. Default: 32.
+///   - positionAttribute: The name of the position attribute. Default: "aPosition".
+///   - normalAttribute: The name of the normal attribute. Default: null => no normals.
+///   - texCoordAttribute: The name of the texture coordinate attribute. Default: null => no uvs.
+///
+/// @returns The sphere entity.
+function createSphere(gl, name, shader, options={})
+{
+  // Default options.
+  const radius = options.radius || 1.0;
+  const latitudeBands = options.latitudeBands || 32;
+  const longitudeBands = options.longitudeBands || 32;
+
+  // Create values for all arrays of the sphere.
+  // They are easier to create and then discard if unused.
+  const positions = [];
+  const normals = [];
+  const texCoords = [];
+ for (let lat = 0; lat <= latitudeBands; lat++) {
+    const theta = lat * Math.PI / latitudeBands;
+    const sinTheta = Math.sin(theta);
+    const cosTheta = Math.cos(theta);
+
+    for (let lon = 0; lon <= longitudeBands; lon++) {
+      const phi = lon * 2 * Math.PI / longitudeBands;
+
+      const x = Math.cos(phi) * sinTheta;
+      const y = cosTheta;
+      const z = Math.sin(phi) * sinTheta;
+      const u = 1. - (lon / longitudeBands);
+      const v = 1. - (lat / latitudeBands);
+
+      positions.push(radius * x, radius * y, radius * z);
+      normals.push(x, y, z);
+      texCoords.push(u, v);
+    }
+  }
+  
+  // Create the interleaved vertex array.
+  const interleaved = [positions];
+  const quantities = [3];
+  let stride = 3;
+  let normalOffset = 3;
+  let texCoordOffset = 3;
+  if (options.normalAttribute) {
+    interleaved.push(normals);
+    quantities.push(3);
+    stride += 3;
+    texCoordOffset += 3;
+  }
+  if (options.texCoordAttribute) {
+    interleaved.push(texCoords);
+    quantities.push(2);
+    stride += 2;
+  }
+  stride *= Float32Array.BYTES_PER_ELEMENT;
+  normalOffset *= Float32Array.BYTES_PER_ELEMENT;
+  texCoordOffset *= Float32Array.BYTES_PER_ELEMENT;
+  const vertexArray = interleaveArrays(interleaved, quantities);
+  const vertexView = new Float32Array(vertexArray);
+
+  // Create the vertex buffers.
+  const vertexBuffers = {};
+  const positionAttribute = options.positionAttribute || "aPosition";
+  vertexBuffers[positionAttribute] = createAttributeBuffer(gl, vertexView,
+    {
+      numComponents: 3,
+      stride,
+    });
+  if(options.normalAttribute) {
+    vertexBuffers[options.normalAttribute] = createAttributeBuffer(gl, vertexView,
+      {
+        numComponents: 3,
+        stride,
+        offset: 3,
+      });
+  }
+  if(options.texCoordAttribute) {
+    vertexBuffers[options.texCoordAttribute] = createAttributeBuffer(gl, vertexView,
+      {
+        numComponents: 2,
+        stride,
+        offset: texCoordOffset,
+      });
+  }
+
+  // Create the indices.
+  const indices = [];
+  for (let lat = 0; lat < latitudeBands; lat++) {
+    for (let lon = 0; lon < longitudeBands; lon++) {
+      const first = (lat * (longitudeBands + 1)) + lon;
+      const second = first + longitudeBands + 1;
+
+      indices.push(first, first + 1, second);
+      indices.push(second, first + 1, second + 1);
+    }
+  }
+  const indexBuffer = createIndexBuffer(gl, indices);
+
+  // Create the sphere entity.
   return createEntity(gl, name, vertexBuffers, indexBuffer, shader);
 }
 
@@ -563,7 +770,7 @@ function createFullscreenQuad(gl, name, shader, options={})
     0, 1, 2, 
     0, 2, 3
   ];
-  const indexBuffer = createIndexBuffer(gl, new Uint8Array(indices));
+  const indexBuffer = createIndexBuffer(gl, indices);
 
   // Create the fullscreen quad entity.
   return createEntity(gl, name, vertexBuffers, indexBuffer, shader);
@@ -635,23 +842,34 @@ function createAttributeBuffer(gl, data, info={})
 /// Simplified version of the `createAttributeBuffer` function above, used for indices.
 ///
 /// @param gl The WebGL context.
-/// @param data The data to store in the buffer as a TypedArray (e.g. Uint16Array).
+/// @param indices A JavaScript array containing the indices.
 ///
 /// @returns The buffer information containing the following properties:
 ///   - buffer: The WebGL buffer.
 ///   - type: The type of the data array.
 ///   - size: The number of elements in the data array.
-function createIndexBuffer(gl, data)
+function createIndexBuffer(gl, indices)
 {
-  // Detect the type of the data array.
+  // Find the highest index.
+  let highestIndex = 0;
+  for(const index of indices) {
+    highestIndex = Math.max(highestIndex, index);
+  }
+
+  // Determine the type of the index buffer.
   let type;
-  if(data instanceof Uint8Array) {
+  let data;
+  if (highestIndex < 256) {
     type = gl.UNSIGNED_BYTE;
-  } else if (data instanceof Uint16Array) {
+    data = new Uint8Array(indices);
+  } else if (highestIndex < 65536) {
     type = gl.UNSIGNED_SHORT;
+    data = new Uint16Array(indices);
+  } else if (highestIndex < 4294967296){
+    type = gl.UNSIGNED_INT;
+    data = new Uint32Array(indices);
   } else {
-    // ... there are more, but we don't need them for this example.
-    throw new Error('Unsupported data type for `data` argument of "createIndexBuffer"');
+    throw new Error(`Index ${highestIndex} does not fit in a 32-bit unsigned integer`);
   }
 
   // Create the buffer and store the data.
@@ -747,13 +965,13 @@ async function createShader(gl, name, vertexPath, fragmentPath, attributes, unif
     const uniformObject = {
       type: uniformInfo.type,
       location,
-      _value: null,
+      _value: uniformInfo.value,
       set value(newValue) {
         if(newValue === this._value) { return; }
         this._value = newValue;
+        // Texture ids do not need to be updated when the texture content changes.
         if(this.type != 'sampler2D') {
-          // Texture ids do not need to be updated when the texture content changes.
-          setUniform(gl, this.location, this.type, this._value);
+          setUniform(gl, this);
         }
       },
       get value() {
@@ -761,18 +979,17 @@ async function createShader(gl, name, vertexPath, fragmentPath, attributes, unif
       }
     };
 
-    // Set the uniform value.
-    if (uniformInfo.type === 'sampler2D') {
-      // Textures are a special case, as they need to be bound to a texture unit.
-      // We just assign them to a unit here but bind them later.
-      uniformObject._value = uniformInfo.value;
+    // Textures are a special case.
+    // We want to store the texture as the uniform value, but we also need to 
+    // bind it to a texture unit, which is never updated.
+    // So we just assign a texture unit here, and store the texture id in the 
+    // uniform object, so it can be used during rendering.
+    if (uniformInfo.type === 'sampler2D') {  
       uniformObject.textureId = textureCounter++;
       gl.uniform1i(location, uniformObject.textureId);
-    } else {
-      uniformObject.value = uniformInfo.value;
-    }  
+    }
 
-    // Store the uniform object.
+    // Store the augmented uniform object.
     uniformObjects[uniformName] = uniformObject;
   }
   gl.useProgram(null);
@@ -980,35 +1197,36 @@ function createFramebuffer(gl, name, width=null, height=null)
 /// Helper function to call the corret gl.uniform* function based on the uniform type.
 ///
 /// @param gl The WebGL context.
-/// @param location The uniform location.
-/// @param type The uniform type.
-/// @param value The value to set.
-function setUniform(gl, location, type, value)
+/// @param uniform The uniform object as defined by `createShader` with the following properties:
+///   - type: The uniform type.
+///   - value: The value to set.
+///   - location: The uniform location.
+function setUniform(gl, uniform)
 {
-  switch(type) {
+  switch(uniform.type) {
     case 'float':
-      gl.uniform1f(location, value);
+      gl.uniform1f(uniform.location, uniform.value);
       break;
     case 'vec2':
-      gl.uniform2fv(location, value);
+      gl.uniform2fv(uniform.location, uniform.value);
       break;
     case 'vec3':
-      gl.uniform3fv(location, value);
+      gl.uniform3fv(uniform.location, uniform.value);
       break;
     case 'vec4':
-      gl.uniform4fv(location, value);
+      gl.uniform4fv(uniform.location, uniform.value);
       break;
     case 'mat2':
-      gl.uniformMatrix2fv(location, false, value);
+      gl.uniformMatrix2fv(uniform.location, false, uniform.value);
       break;
     case 'mat3':
-      gl.uniformMatrix3fv(location, false, value);
+      gl.uniformMatrix3fv(uniform.location, false, uniform.value);
       break;
     case 'mat4':
-      gl.uniformMatrix4fv(location, false, value);
+      gl.uniformMatrix4fv(uniform.location, false, uniform.value);
       break;
     case 'int':
-      gl.uniform1i(location, value);
+      gl.uniform1i(uniform.location, uniform.value);
       break;
     default:
       throw new Error(`Unsupported uniform type "${type}"`);
@@ -1032,4 +1250,70 @@ function repeat(pattern, times)
 function isPowerOf2(value) 
 {
   return (value & (value - 1)) === 0;
+}
+
+/// Interleave the given arrays, taking a number of elements (quantity) from each array in turn.
+///
+/// @param arrays An array of arrays to interleave.
+/// @param quantities Either an array of quantities to take from each array, 
+///   or a single quantity to take from each array. Defaults to 1.
+///
+/// @returns A new array with the interleaved values.
+function interleaveArrays(arrays, quantities=1)
+{
+    // Ensure that all arrays are the same size.
+    if (arrays.length === 0) {
+        return [];
+    }
+
+    // If there is only one array, return it.
+    if (arrays.length === 1) {
+        return arrays[0];
+    }
+
+    // Ensure that quantities is an array of the correct size.
+    if(!Array.isArray(quantities)) {
+        quantities = repeat([quantities], arrays.length);
+    } else if (quantities.length !== arrays.length) {
+        throw new Error(`'quantities' must be either a number or an array with the same length as 'arrays'.\n` +
+            `    'quantities' length: ${quantities.length}\n` + 
+            `    'arrays' length: ${arrays.length}`
+        );
+    }
+
+    // Ensure that the every quantity is valid.
+    const bandCount = arrays[0].length / quantities[0];
+    for(let i = 0; i < arrays.length; i++) {
+        const quantity = quantities[i];
+        if(quantity < 1) {
+            throw new Error(`'quantity' must be greater than 0, but the value at index ${i} is ${quantity}`);
+        }
+        if(quantity % 1 !== 0) {
+            throw new Error(`'quantity' must be an integer, but the value at index ${i} is ${quantity}`);
+        }
+        if(arrays[i].length % quantity !== 0) {
+            throw new Error(`The length of the corresponding array must be a multiple of 'quantity'\n` +
+            `    but the quantity at index ${i} is ${quantity}\n` +
+            `    whereas the length of the corresponding array is ${arrays[i].length}`
+            );
+        }
+        if (arrays[i].length / quantity !== bandCount) {
+            throw new Error(`All arrays must have the same number of quantities,\n`+
+            `    but array ${i} of size ${arrays[i].length} contains ${arrays[i].length / quantity} times ${quantity} quantities,\n` +
+            `    whereas the first array conttains ${arrays[0].length / quantity} times ${quantities[0]} quantities.`
+            );
+        }
+    }
+
+    // Interleave the arrays.
+    const interleaved = [];
+    for(let band = 0; band < bandCount; band++) {
+        for(let arrayIndex = 0; arrayIndex < arrays.length; arrayIndex++) {
+            const array = arrays[arrayIndex];
+            const quantity = quantities[arrayIndex];
+            interleaved.push(...array.slice(band * quantity, (band + 1) * quantity));
+        }
+    }
+
+    return interleaved;
 }

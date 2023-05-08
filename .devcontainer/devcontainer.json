@@ -17,7 +17,7 @@
 			"extensions": [
 				"bmalehorn.vscode-fish",
 				"eamodio.gitlens",
-				"github.copilot",
+				"GitHub.copilot-nightly",
 				"gruntfuggly.todo-tree",
 				"jpsnee.vscode-editor-macros",
 				"ow.vscode-subword-navigation",
