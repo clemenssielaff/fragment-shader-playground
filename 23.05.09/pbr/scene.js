@@ -224,7 +224,7 @@ async function main_test() {
     quadEntity.indexBuffer,
     greyscaleShader,
   );
-  const geoEntity = createSphere(gl, 
+  const geoEntity = createBox(gl, 
     "Geo Entity", 
     flatShader, 
     {
@@ -518,7 +518,6 @@ function createEntity(gl, name, vertexBuffers, indexBuffer, shader)
 /// @returns The box entity.
 function createBox(gl, name, shader, options={})
 {
-   // TODO: interleave positions, normals, and uvs
   const halfWidth = (options.width || 1.) / 2.;
   const halfHeight = (options.height || 1.) / 2.;
   const halfDepth = (options.depth || 1.) / 2.;
@@ -562,11 +561,75 @@ function createBox(gl, name, shader, options={})
     -halfWidth,  halfHeight, -halfDepth,
   ];
 
+  // The normals never change.
+  const normals = [
+    repeat([ 0,  0,  1], 4),  // front
+    repeat([ 0,  0, -1], 4),  // back
+    repeat([ 0,  1,  0], 4),  // top
+    repeat([ 0, -1,  0], 4),  // bottom
+    repeat([ 1,  0,  0], 4),  // right
+    repeat([-1,  0,  0], 4),  // left
+  ].flat();
+
+  // .. neither do the UVs.
+  const texCoords = repeat([
+      0, 0, // bottom left
+      1, 0, // bottom right
+      1, 1, // top right
+      0, 1, // top left
+    ], 6);
+
+  // Create the interleaved vertex array.
+  const interleaved = [positions];
+  const quantities = [3];
+  let stride = 3;
+  let normalOffset = 3;
+  let texCoordOffset = 3;
+  if (options.normalAttribute) {
+    interleaved.push(normals);
+    quantities.push(3);
+    stride += 3;
+    texCoordOffset += 3;
+  }
+  if (options.texCoordAttribute) {
+    interleaved.push(texCoords);
+    quantities.push(2);
+    stride += 2;
+  }
+  stride *= Float32Array.BYTES_PER_ELEMENT;
+  normalOffset *= Float32Array.BYTES_PER_ELEMENT;
+  texCoordOffset *= Float32Array.BYTES_PER_ELEMENT;
+  const vertexArray = interleaveArrays(interleaved, quantities);
+  const vertexView = new Float32Array(vertexArray);
+
   // We know that the box requires vertex positions, so we always create a
   // buffer for them.
   const vertexBuffers = {};
   const positionAttribute = options.positionAttribute || "aPosition";
-  vertexBuffers[positionAttribute] = createAttributeBuffer(gl, new Float32Array(positions));
+  vertexBuffers[positionAttribute] = createAttributeBuffer(gl, vertexView,
+    {
+      numComponents: 3,
+      stride,
+      offset: 0,
+    });
+  if(options.normalAttribute) {
+    vertexBuffers[options.normalAttribute] = createAttributeBuffer(gl, vertexView,
+      {
+        numComponents: 3,
+        stride,
+        offset: normalOffset,
+        buffer: vertexBuffers[positionAttribute].buffer,
+      });
+  }
+  if(options.texCoordAttribute) {
+    vertexBuffers[options.texCoordAttribute] = createAttributeBuffer(gl, vertexView,
+      {
+        numComponents: 2,
+        stride,
+        offset: texCoordOffset,
+        buffer: vertexBuffers[positionAttribute].buffer,
+      });
+  }
 
   // This array defines each face as two triangles, using the
   // indices into the vertex array to specify each triangle's
@@ -580,37 +643,6 @@ function createBox(gl, name, shader, options={})
     20, 21, 22,   20, 22, 23,  // left
   ];
   const indexBuffer = createIndexBuffer(gl, indices);
-
-  // If the shader program contains a normal attribute, we can generate normals.
-  const normalAttribute = options.normalAttribute || null;
-  if (normalAttribute) {
-    const normals = [
-      repeat([ 0,  0,  1], 4),  // front
-      repeat([ 0,  0, -1], 4),  // back
-      repeat([ 0,  1,  0], 4),  // top
-      repeat([ 0, -1,  0], 4),  // bottom
-      repeat([ 1,  0,  0], 4),  // right
-      repeat([-1,  0,  0], 4),  // left
-    ].flat();
-    vertexBuffers[normalAttribute] = createAttributeBuffer(gl, new Float32Array(normals));
-  }
-
-  // If the shader program contains a tex coordinate attribute, we can generate uvs.
-  const texCoordAttribute = options.texCoordAttribute || null;
-  if (texCoordAttribute) {
-    const texCoords = repeat([
-        0, 0, // bottom left
-        1, 0, // bottom right
-        1, 1, // top right
-        0, 1, // top left
-      ], 6);
-    vertexBuffers[texCoordAttribute] = createAttributeBuffer(gl, 
-      new Float32Array(texCoords), 
-      {
-        numComponents: 2
-      }
-    );
-  }
 
   // Create the box entity.
   return createEntity(gl, name, vertexBuffers, indexBuffer, shader);
@@ -692,13 +724,15 @@ function createSphere(gl, name, shader, options={})
     {
       numComponents: 3,
       stride,
+      offset: 0,
     });
   if(options.normalAttribute) {
     vertexBuffers[options.normalAttribute] = createAttributeBuffer(gl, vertexView,
       {
         numComponents: 3,
         stride,
-        offset: 3,
+        offset: normalOffset,
+        buffer: vertexBuffers[positionAttribute].buffer,
       });
   }
   if(options.texCoordAttribute) {
@@ -707,6 +741,7 @@ function createSphere(gl, name, shader, options={})
         numComponents: 2,
         stride,
         offset: texCoordOffset,
+        buffer: vertexBuffers[positionAttribute].buffer,
       });
   }
 
@@ -792,6 +827,7 @@ function createFullscreenQuad(gl, name, shader, options={})
 ///   - stride: The stride of each vertex attribute. Default: 0.
 ///   - offset: The offset of each vertex attribute. Default: 0.
 ///   - usage: The usage pattern of the data store. Default: gl.STATIC_DRAW.
+///   - buffer: Existing buffer to use instead of creating a new one. Default: null.
 ///
 /// @returns The buffer information containing the following properties:
 ///   - buffer: The WebGL buffer.
@@ -809,6 +845,7 @@ function createAttributeBuffer(gl, data, info={})
   const stride = info.stride || 0;
   const offset = info.offset || 0;
   const usage = info.usage || gl.STATIC_DRAW;
+  const existingBuffer = info.buffer || null;
 
   // Detect the type of the data array.
   let type;
@@ -820,10 +857,15 @@ function createAttributeBuffer(gl, data, info={})
   }
 
   // Create the buffer and store the data.
-  const buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, data, usage);
-  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  let buffer;
+  if(existingBuffer) {
+    buffer = existingBuffer;
+  } else {
+    buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, data, usage);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  }
 
   // Return the buffer information.
   return {
