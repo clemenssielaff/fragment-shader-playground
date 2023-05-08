@@ -162,7 +162,7 @@ async function main() {
 
   // Create the framebuffers.
   const offscreenFramebuffer = createFramebuffer(gl, "Offscreen Framebuffer");
-  const greyscaleFramebuffer = createFramebuffer(gl, "Offscreen Framebuffer");
+  const greyscaleFramebuffer = createFramebuffer(gl, "Greyscale Framebuffer");
 
   // Create the shaders.
   const flatShader = await createShader(gl,
@@ -218,8 +218,10 @@ async function main() {
     "Quad",
     quadShader,
   );
-  const greyscaleEntity = createFullscreenQuad(gl,
+  const greyscaleEntity = createEntity(gl, // copy the quad entity geometry
     "Greyscale Quad",
+    quadEntity.vertexBuffers,
+    quadEntity.indexBuffer,
     greyscaleShader,
   );
   const boxEntity = createBox(gl, 
@@ -298,7 +300,10 @@ main();
 ///
 /// @return The entity object, containing the following properties:
 ///   - name: The name of the entity.
+///   - vertexBuffers: A map of vertex buffers, named by their attribute.
+///   - indexBuffer: The index buffer.
 ///   - uniform: All uniform values of the shader program.
+///   - shader: The shader program.
 ///   - render: A function to render the entity.
 function createEntity(gl, name, vertexBuffers, indexBuffer, shader)
 {
@@ -311,6 +316,10 @@ function createEntity(gl, name, vertexBuffers, indexBuffer, shader)
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer.buffer);
 
     const location = shader.attribute[attribute];
+    if(location === undefined) {
+      console.warn(`Attribute '${attribute}' of entity '${name}' not used in shader '${shader.name}'`);
+      continue;
+    }
     gl.vertexAttribPointer(location,
       vertexBuffer.numComponents, // components per vertex
       vertexBuffer.type,          // the data type of each component
@@ -389,7 +398,10 @@ function createEntity(gl, name, vertexBuffers, indexBuffer, shader)
   // Return the entity object.
   return {
     name,
+    vertexBuffers,
+    indexBuffer,
     uniform: entityUniforms,
+    shader,
     render,
   }
 }
@@ -410,6 +422,7 @@ function createEntity(gl, name, vertexBuffers, indexBuffer, shader)
 /// @returns The box entity.
 function createBox(gl, name, shader, options={})
 {
+   // TODO: interleave positions, normals, and uvs
   const halfWidth = (options.width || 1.) / 2.;
   const halfHeight = (options.height || 1.) / 2.;
   const halfDepth = (options.depth || 1.) / 2.;
@@ -812,7 +825,7 @@ function createTexture(gl, path, options = {})
   gl.bindTexture(gl.TEXTURE_2D, null);
 
   // Asynchronously load an image into the texture.
-  const image = new Image();
+  let image = new Image();
   image.onload = () => {
       // Upload the image into the texture.
       gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -840,7 +853,7 @@ function createTexture(gl, path, options = {})
 
       // Cleanup
       gl.bindTexture(gl.TEXTURE_2D, null);
-      // image = null; // TODO: does this work?
+      image = null;
   };
   image.src = `./texture/${path}`;
 
