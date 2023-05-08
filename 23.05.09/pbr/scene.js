@@ -157,68 +157,123 @@ async function main() {
       console.log('WebGL is good to go');
   }
 
-  // Prepare the OpenGL state machine
-  gl.clearColor(0.0, 0.0, 0.0, 1.0); // Set clear color to black, fully opaque
-  gl.enable(gl.DEPTH_TEST);   // Enable depth testing.
-  gl.depthFunc(gl.LEQUAL);    // Set depth function to less than AND equal for skybox depth trick.
-
+  // Create the textures.
   const texture = await createTexture(gl, "brick_wall_001_diffuse_1k.png");
 
-  const simpleShader = await createShader(gl,
-    "Simple Shader",                // name
-    "simple.vert",                  // vertex shader source file
-    "simple.frag",                  // fragment shader source file
-    [                               // attributes
-      "aPosition",                  //  ...
-      "aTexCoord"                   //  ...
-    ], {                            // uniforms
-      "uModelViewMatrix": {         //  ...
-          type: "mat4",             //  ...
-          value: mat4.create()      //  ...
-      },                            //  ... 
-      "uProjectionMatrix": {        //  ...
-          type: "mat4",             //  ...
-          value: mat4.create()      //  ...
-      },                            //  ... 
-      "uTexture": {                 //  ...
-          type: "sampler2D",        //  ...
-          value: texture            //  ...
-      },                            //  ... 
-    }
-  );
+  // Create the framebuffers.
+  const offscreenFramebuffer = createFramebuffer(gl, "Offscreen Framebuffer");
+  const greyscaleFramebuffer = createFramebuffer(gl, "Offscreen Framebuffer");
 
-  const box = createBox(gl, 
+  // Create the shaders.
+  const flatShader = await createShader(gl,
+    "Flat Shader",                  // name
+    "flat.vert",                    // vertex shader source file
+    "flat.frag",                    // fragment shader source file
+    [                               // attributes
+      "aPosition",
+      "aTexCoord"
+    ], {                            // uniforms
+      "uModelViewMatrix": {
+          type: "mat4",
+          value: mat4.create()
+      }, 
+      "uProjectionMatrix": {
+          type: "mat4",
+          value: mat4.create()
+      }, 
+      "uTexture": {
+          type: "sampler2D",
+          value: texture
+      }, 
+    });
+  const greyscaleShader = await createShader(gl,
+    "Greyscale Shader",             // name
+    "quad.vert",                    // vertex shader source file
+    "greyscale.frag",               // fragment shader source file
+    [                               // attributes
+      "aPosition",
+      "aTexCoord"
+    ], {                            // uniforms
+      "uTexture": {
+          type: "sampler2D",
+          value: offscreenFramebuffer.color,
+      }
+    });
+  const quadShader = await createShader(gl,
+    "Quad Shader",                  // name
+    "quad.vert",                    // vertex shader source file
+    "quad.frag",                    // fragment shader source file
+    [                               // attributes
+      "aPosition",
+      "aTexCoord"
+    ], {                            // uniforms
+      "uTexture": {
+          type: "sampler2D",
+          value: greyscaleFramebuffer.color,
+      }
+    });
+
+  // Create the entities.
+  const quadEntity = createFullscreenQuad(gl,
+    "Quad",
+    quadShader,
+  );
+  const greyscaleEntity = createFullscreenQuad(gl,
+    "Greyscale Quad",
+    greyscaleShader,
+  );
+  const boxEntity = createBox(gl, 
     "Box", 
-    simpleShader, 
+    flatShader, 
     {
       texCoordAttribute: "aTexCoord",
     }
   );
 
-  function render(now) {
-    // Clear the canvas before we start drawing on it.
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  // Prepare the OpenGL state machine
+  gl.clearColor(0.0, 0.0, 0.0, 1.0); // Set clear color to black, fully opaque
+  gl.enable(gl.DEPTH_TEST);   // Enable depth testing.
+  gl.depthFunc(gl.LEQUAL);    // Set depth function to less than AND equal for skybox depth trick.
 
-    // Create a perspective projection matrix.
-    const projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix,
-      0.7853981633974483,       // 45deg field of view in radians
-      (gl.canvas.clientWidth /  // aspect ratio
-        gl.canvas.clientHeight),
-      0.1,                      // near clipping plane
-      100);                     // far clipping plane
+  // Create a perspective projection matrix.
+  const projectionMatrix = mat4.create();
+  mat4.perspective(projectionMatrix,
+    0.7853981633974483,       // 45deg field of view in radians
+    (gl.canvas.clientWidth /  // aspect ratio
+      gl.canvas.clientHeight),
+    0.1,                      // near clipping plane
+    100);                     // far clipping plane
+  
+  // Define static uniforms.
+  boxEntity.uniform.uProjectionMatrix = projectionMatrix;
+  boxEntity.uniform.uTexture = texture;
 
+  function updateBox() {
     // Position the model in front of the camera.
     const modelViewMatrix = mat4.create();
     mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -5]);
     mat4.rotate(modelViewMatrix, modelViewMatrix, 0.6, [1, 0, 0]);
 
-    box.uniform.uModelViewMatrix = modelViewMatrix;
-    box.uniform.uProjectionMatrix = projectionMatrix;
-    box.uniform.uTexture = texture;
+    boxEntity.uniform.uModelViewMatrix = modelViewMatrix;
+  }
 
-    box.render();
+  function render(now) {
+    updateBox();
 
+    // Clear the canvas before we start drawing on it.
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    offscreenFramebuffer.use();
+    boxEntity.render();
+    offscreenFramebuffer.unuse();
+
+    greyscaleFramebuffer.use();
+    greyscaleEntity.render();
+    greyscaleFramebuffer.unuse();
+
+    quadEntity.render();
+
+    // Call render() again next frame.
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
@@ -331,6 +386,7 @@ function createEntity(gl, name, vertexBuffers, indexBuffer, shader)
     }
   }
 
+  // Return the entity object.
   return {
     name,
     uniform: entityUniforms,
@@ -338,20 +394,20 @@ function createEntity(gl, name, vertexBuffers, indexBuffer, shader)
   }
 }
 
+
 /// Creates a Box around the origin with the given options.
 /// @param gl The WebGL context.
 /// @param name The name of the box entity.
 /// @param shader The shader program to use for rendering the box.
-/// @param options An object containing optional information about the box (see below).
-/// @returns The box entity.
-///
-/// The options object can contain the following optional properties:
+/// @param options An object containing the following optional properties:
 ///   - width: The width of the box. Default: 1.0.
 ///   - height: The height of the box. Default: 1.0.
 ///   - depth: The depth of the box. Default: 1.0.
 ///   - positionAttribute: The name of the position attribute. Default: "aPosition".
 ///   - normalAttribute: The name of the normal attribute. Default: null => no normals.
 ///   - texCoordAttribute: The name of the texture coordinate attribute. Default: null => no uvs.
+///
+/// @returns The box entity.
 function createBox(gl, name, shader, options={})
 {
   const halfWidth = (options.width || 1.) / 2.;
@@ -399,10 +455,9 @@ function createBox(gl, name, shader, options={})
 
   // We know that the box requires vertex positions, so we always create a
   // buffer for them.
+  const vertexBuffers = {};
   const positionAttribute = options.positionAttribute || "aPosition";
-  const vertexBuffers = {
-    positionAttribute: createAttributeBuffer(gl, new Float32Array(positions))
-  }
+  vertexBuffers[positionAttribute] = createAttributeBuffer(gl, new Float32Array(positions));
 
   // This array defines each face as two triangles, using the
   // indices into the vertex array to specify each triangle's
@@ -449,6 +504,55 @@ function createBox(gl, name, shader, options={})
   }
 
   // Create the box entity.
+  return createEntity(gl, name, vertexBuffers, indexBuffer, shader);
+}
+
+
+/// Creates a fullscreen quad with the given options.
+/// @param gl The WebGL context.
+/// @param name The name of the fullscreen entity.
+/// @param shader The shader program to use for rendering.
+/// @param options An object containing the following optional properties:
+///   - positionAttribute: The name of the position attribute. Default: "aPosition".
+///   - texCoordAttribute: The name of the texture coordinate attribute. Default: "aTexCoord".
+///
+/// @returns The fullscreen entity.
+function createFullscreenQuad(gl, name, shader, options={})
+{
+  // Position and texture coordinates for a quad that fills the entire screen
+  // in Normalized Device Coordinates.
+  const vertices = [
+    // positions  // texCoords
+    -1,  1,       0, 1,
+    -1, -1,       0, 0,
+     1, -1,       1, 0,
+     1,  1,       1, 1,
+  ];
+
+  // From experience, we know that the fullscreen quad requires vertex positions
+  // and texture coordinates, so we always create buffers for them.
+  const vertexBuffers = {};
+  const vertexView = new Float32Array(vertices);
+  const positionAttribute = options.positionAttribute || "aPosition";
+  vertexBuffers[positionAttribute] = createAttributeBuffer(gl, vertexView, {
+      numComponents: 2,
+      stride: 4 * Float32Array.BYTES_PER_ELEMENT,
+    });
+  const texCoordAttribute = options.texCoordAttribute || "aTexCoord";
+  vertexBuffers[texCoordAttribute] = createAttributeBuffer(gl, vertexView, {
+      numComponents: 2,
+      stride: 4 * Float32Array.BYTES_PER_ELEMENT,
+      offset: 2 * Float32Array.BYTES_PER_ELEMENT,
+    });
+
+  // Create the index buffer.
+  const indices = [
+    0, 1, 2, 
+    0, 2, 3
+  ];
+  const indexBuffer = createIndexBuffer(gl, new Uint8Array(indices));
+
+  // Create the fullscreen quad entity.
   return createEntity(gl, name, vertexBuffers, indexBuffer, shader);
 }
 
@@ -528,7 +632,9 @@ function createIndexBuffer(gl, data)
 {
   // Detect the type of the data array.
   let type;
-  if (data instanceof Uint16Array) {
+  if(data instanceof Uint8Array) {
+    type = gl.UNSIGNED_BYTE;
+  } else if (data instanceof Uint16Array) {
     type = gl.UNSIGNED_SHORT;
   } else {
     // ... there are more, but we don't need them for this example.
@@ -740,6 +846,121 @@ function createTexture(gl, path, options = {})
 
   // Return the OpenGL texture object before the image has loaded.
   return texture;
+}
+
+
+/// Stack of all bound framebuffers.
+const _globalFramebufferStack = [];
+
+/// Create a new framebuffer object with a texture in the color attachment,
+/// and a renderbuffer in the depth/stencil attachment.
+///
+/// @param gl The WebGL context.
+/// @param name The name of the framebuffer.
+/// @param width The width of the framebuffer, defaults to the canvas width.
+/// @param height The height of the framebuffer, defaults to the canvas height.
+///
+/// @returns The framebuffer object with the following properties:
+///   - name: The name of the framebuffer.
+///   - framebuffer: The OpenGL framebuffer object.
+///   - colorTexture: The OpenGL texture object in the color attachment.
+///   - depthStencilRenderbuffer: The OpenGL renderbuffer object in the depth/stencil attachment.
+///   - width: The width of the framebuffer.
+///   - height: The height of the framebuffer.
+///   - use: A function to bind the framebuffer.
+///   - unuse: A function to unbind the framebuffer.
+function createFramebuffer(gl, name, width=null, height=null)
+{
+  width = width || gl.canvas.width;
+  height = height || gl.canvas.height;
+
+  // Create the Framebuffer.
+  const framebuffer = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+
+  // Create and attach the color texture.
+  const colorTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, colorTexture);
+  gl.texImage2D(gl.TEXTURE_2D,
+    0,                // level
+    gl.RGB,           // internalFormat
+    width,            // width
+    height,           // height
+    0,                // border
+    gl.RGB,           // format
+    gl.UNSIGNED_BYTE, // type
+    null              // data
+  );
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,
+    gl.COLOR_ATTACHMENT0, // attachment
+    gl.TEXTURE_2D,        // texture target
+    colorTexture,         // texture
+    0                     // level
+  );
+  gl.bindTexture(gl.TEXTURE_2D, null);
+
+  // Create and attach the depth/stencil renderbuffer.
+  const depthStencilRenderbuffer = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, depthStencilRenderbuffer);
+  gl.renderbufferStorage(gl.RENDERBUFFER,
+    gl.DEPTH24_STENCIL8, // internalFormat
+    width,               // width
+    height               // height
+  );
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER,
+    gl.DEPTH_STENCIL_ATTACHMENT, // attachment
+    gl.RENDERBUFFER,             // renderbuffer target
+    depthStencilRenderbuffer     // renderbuffer
+  );
+  gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+  // Check that the framebuffer is complete.
+  if(gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+    console.error(`Failed to complete Framebuffer "${name}"!`);
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+  // Create the framebuffer object.
+  const framebufferObject = {
+    name,
+    framebuffer,
+    color: colorTexture,
+    depthStencil: depthStencilRenderbuffer,
+    width,
+    height,
+  }
+
+  // The `use` function binds the framebuffer and sets the viewport.
+  framebufferObject.use = () => {
+    if(_globalFramebufferStack.at(-1) === framebufferObject) {
+      return;
+    }
+    _globalFramebufferStack.push(framebufferObject);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.viewport(0, 0, width, height);
+  };
+
+  // The `unuse` function unbinds the framebuffer and restores the viewport.
+  framebufferObject.unuse = () => {
+    if(_globalFramebufferStack.at(-1) !== framebufferObject) {
+      return;
+    }
+    _globalFramebufferStack.pop();
+
+    const previousFramebuffer = _globalFramebufferStack.at(-1);
+    if(previousFramebuffer) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer.framebuffer);
+      gl.viewport(0, 0, previousFramebuffer.width, previousFramebuffer.height);
+    } else {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    }
+  };
+
+  // Return the augmented framebuffer object.
+  return framebufferObject;
 }
 
 
