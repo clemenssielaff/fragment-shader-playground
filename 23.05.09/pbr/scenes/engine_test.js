@@ -4,7 +4,7 @@
 
 const { vec3, mat3, mat4 } = glMatrix;
 
-import * as engine from "../engine.js";
+import * as glance from "../glance.js";
 
 async function main() {
   // Get the WebGL context from the canvas element in the DOM.
@@ -16,14 +16,14 @@ async function main() {
   }
 
   // Create the textures.
-  const texture = await engine.createTexture(gl, "brick_wall_001_diffuse_1k.png");
+  const texture = await glance.createTexture(gl, "brick_wall_001_diffuse_1k.png");
 
   // Create the framebuffers.
-  const offscreenFramebuffer = engine.createFramebuffer(gl, "Offscreen Framebuffer");
-  const greyscaleFramebuffer = engine.createFramebuffer(gl, "Greyscale Framebuffer");
+  const offscreenFramebuffer = glance.createFramebuffer(gl, "Offscreen Framebuffer");
+  const greyscaleFramebuffer = glance.createFramebuffer(gl, "Greyscale Framebuffer");
 
   // Create the shaders.
-  const flatShader = await engine.createShader(gl,
+  const flatShader = await glance.createShader(gl,
     "Flat Shader",                  // name
     "flat.vert",                    // vertex shader source file
     "flat.frag",                    // fragment shader source file
@@ -44,7 +44,7 @@ async function main() {
           value: texture
       }, 
     });
-  const greyscaleShader = await engine.createShader(gl,
+  const greyscaleShader = await glance.createShader(gl,
     "Greyscale Shader",             // name
     "quad.vert",                    // vertex shader source file
     "greyscale.frag",               // fragment shader source file
@@ -57,7 +57,7 @@ async function main() {
           value: offscreenFramebuffer.color,
       }
     });
-  const quadShader = await engine.createShader(gl,
+  const quadShader = await glance.createShader(gl,
     "Quad Shader",                  // name
     "quad.vert",                    // vertex shader source file
     "quad.frag",                    // fragment shader source file
@@ -72,17 +72,17 @@ async function main() {
     });
 
   // Create the entities.
-  const quadEntity = engine.createFullscreenQuad(gl,
+  const quadEntity = glance.createFullscreenQuad(gl,
     "Quad",
     quadShader,
   );
-  const greyscaleEntity = engine.createEntity(gl, // copy the quad entity geometry
+  const greyscaleEntity = glance.createEntity(gl, // copy the quad entity geometry
     "Greyscale Quad",
     quadEntity.vertexBuffers,
     quadEntity.indexBuffer,
     greyscaleShader,
   );
-  const geoEntity = engine.createBox(gl, 
+  const geoEntity = glance.createBox(gl, 
     "Geo Entity", 
     flatShader, 
     {

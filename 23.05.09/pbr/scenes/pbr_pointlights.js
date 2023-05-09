@@ -3,7 +3,7 @@
 
 const { vec3, mat3, mat4 } = glMatrix;
 
-import * as engine from "../engine.js";
+import * as glance from "../glance.js";
 
 async function main() {
   // Get the WebGL context from the canvas element in the DOM.
@@ -47,7 +47,7 @@ async function main() {
   mat4.lookAt(initialViewMatrix, initialCameraPosition, worldCenter, vec3.fromValues(0, 1, 0));
 
   // Create the shaders.
-  const pbrShader = await engine.createShader(gl,
+  const pbrShader = await glance.createShader(gl,
     "PBR Shader",                   // name
     "pbr1.vert",                    // vertex shader source file
     "pbr1.frag",                    // fragment shader source file
@@ -103,7 +103,7 @@ async function main() {
 
 
   // Create the entities.
-  const sphereEntity = engine.createSphere(gl, 
+  const sphereEntity = glance.createSphere(gl, 
     "Sphere Entity",
     pbrShader,
     {
