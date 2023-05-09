@@ -1,4 +1,5 @@
 export { 
+    getContext,
     createEntity,
     createBox,
     createSphere,
@@ -11,8 +12,21 @@ export {
 };
 
 // =============================================================================
-// High-level functions ========================================================
+// High-level functions 
 // =============================================================================
+
+
+/// Get the WebGL2 context from a canvas element in the DOM.
+///
+/// @param canvasId The id of the canvas element.
+function getContext(canvasId)
+{
+  const gl = document.querySelector(`#${canvasId}`).getContext('webgl2');
+  if (!gl) {
+      console.error(`Could not acquire a WebGL2 context from canvas '${canvasId}'`);
+  }
+  return gl;
+}
 
 
 /// An Entity is a collection of vertex buffers, an index buffer, and a shader.
@@ -86,7 +100,12 @@ function createEntity(gl, name, vertexBuffers, indexBuffer, shader)
     if(shaderUniform.type === "sampler2D"){
       textures.push(shaderUniform);
     }
-  }
+  } 
+  // TODO: it would be better to select the uniforms stored in the entity.
+  //    If the shader has, for example, a projection matrix, then we currently
+  //    need to update the projection matrix for every entity, even though it
+  //    is the same for all entities.
+  //    It would be better to update the projection matrix in the shader once.
 
   /// Renders the entity.
   function render() {
@@ -443,7 +462,7 @@ function createFullscreenQuad(gl, name, shader, options={})
 
 
 // =============================================================================
-// Low-level functions =========================================================
+// Low-level functions
 // =============================================================================
 
 
@@ -910,7 +929,7 @@ function setUniform(gl, uniform)
 
 
 // =============================================================================
-// Utility functions ===========================================================
+// Utility functions
 // =============================================================================
 
 

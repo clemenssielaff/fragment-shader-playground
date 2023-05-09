@@ -5,14 +5,43 @@ const { vec3, mat3, mat4 } = glMatrix;
 
 import * as glance from "../glance.js";
 
+
+// =============================================================================
+// Application State
+// =============================================================================
+
+
+// Glance
+let gl;                   // the WebGL context
+let sphere;               // the sphere entity
+let cameraDistance = 20;  // distance of the camera from the origin
+let cameraPan = 0;        // rotation of the camera around the vertical axis
+let cameraTilt = 0;       // rotation of the camera around the horizontal axis
+const cameraFov = 45;     // field of view of the camera in degrees
+const nearPlane = 2;      // near clipping plane
+const farPlane = 50;      // far clipping plane
+
+// User Input
+const panAcceleration = 0.008;
+const tiltAcceleration = 0.008;
+const zoomAcceleration = 0.01;
+const cameraMinDistance = 11;
+const cameraMaxDistance = 40;
+
+// Scene
+const rowCount = 4;
+const colCount = 4;
+const spacing = 2.5;
+
+
+// =============================================================================
+// Application
+// =============================================================================
+
+
 async function main() {
   // Get the WebGL context from the canvas element in the DOM.
-  const gl = document.querySelector("#canvas").getContext('webgl2');
-  if (!gl) {
-      console.log('WebGL unavailable');
-  } else {
-      console.log('WebGL is good to go');
-  }
+  gl = glance.getContext("canvas");
 
   // Create uniform constants
   const aspectRatio = gl.canvas.clientWidth / gl.canvas.clientHeight;
@@ -38,14 +67,6 @@ async function main() {
     300, 300, 300,
   ]
 
-  let cameraDistance = 20;
-  const worldCenter = vec3.fromValues(0, 0, 0);
-
-  const initialCameraPosition = vec3.fromValues(0, 0, cameraDistance);
-  vec3.rotateY(initialCameraPosition, initialCameraPosition, worldCenter, 0);
-  const initialViewMatrix = mat4.create();
-  mat4.lookAt(initialViewMatrix, initialCameraPosition, worldCenter, vec3.fromValues(0, 1, 0));
-
   // Create the shaders.
   const pbrShader = await glance.createShader(gl,
     "PBR Shader",                   // name
@@ -61,7 +82,7 @@ async function main() {
       },
      "uViewMatrix": {
           type: "mat4",
-          value: initialViewMatrix
+          value: mat4.create()
       },
      "uModelMatrix": {
           type: "mat4",
@@ -97,13 +118,12 @@ async function main() {
       },
       "uCamPos": {
           type: "vec3",
-          value: initialCameraPosition
+          value: vec3.create()
       },
     });
 
-
   // Create the entities.
-  const sphereEntity = glance.createSphere(gl, 
+  sphere = glance.createSphere(gl, 
     "Sphere Entity",
     pbrShader,
     {
@@ -113,71 +133,163 @@ async function main() {
     }
   );
 
+  // Connect the user interaction handlers.
+  window.addEventListener('mousemove', handleMouseMove);
+  window.addEventListener('wheel', handleWheel);
+  window.addEventListener('resize', updateProjection);
+
   // Prepare the OpenGL state machine
   gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Set clear color to black, fully opaque
   gl.enable(gl.DEPTH_TEST);           // Enable depth testing.
+  gl.depthFunc(gl.LEQUAL);            // Near things obscure far things.
+  gl.clearDepth(1.0);                 // Clear everything.
+  gl.enable(gl.CULL_FACE);            // Enable backface culling.
+  gl.cullFace(gl.BACK);               // Cull back-facing triangles.
 
-  const nRows = 4;
-  const nCols = 4;
-  const spacing = 2.5;
+  // Update the projection and camera position to render the first frame.
+  updateProjection();
+  updateCameraPosition();
+}
 
-  // The render loop.
-  function render() {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Render a grid of spheres.
-    for(let row = 0; row <= nRows; row++) {
-      // Update the metallic.
-      sphereEntity.uniform.uMetallic = row / nRows;
+// =============================================================================
+// Render Loop
+// =============================================================================
 
-      for(let col = 0; col <= nCols; col++) {
-        // Update the roughness.
-        sphereEntity.uniform.uRoughness = Math.min(Math.max(col / nCols, .05), 1);
 
-        // Update the model matrix.
-        const modelMatrix = mat4.create();
-        mat4.translate(modelMatrix, modelMatrix, [
-          (col - nCols / 2) * spacing, 
-          (row - nRows / 2) * spacing, 
-          0
-        ]);
-        sphereEntity.uniform.uModelMatrix = modelMatrix;
+function render() 
+{
+  // Clear the canvas.
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        // Update the normal matrix.
-        const normalMatrix = mat3.create();
-        mat3.normalFromMat4(normalMatrix, modelMatrix);
-        sphereEntity.uniform.uNormalMatrix = normalMatrix;
-    
-        sphereEntity.render();
-      }
+  // Render a grid of spheres.
+  for(let row = 0; row <= rowCount; row++) {
+    // Increase the "metallicness" from bottom to top.
+    sphere.uniform.uMetallic = row / rowCount;
+
+    for(let col = 0; col <= colCount; col++) {
+      // Increase the roughness from left to right.
+      sphere.uniform.uRoughness = Math.min(Math.max(col / colCount, .05), 1);
+
+      // Update the model matrix.
+      const modelMatrix = mat4.create();
+      mat4.translate(modelMatrix, modelMatrix, [
+        (col - colCount / 2) * spacing, 
+        (row - rowCount / 2) * spacing, 
+        0
+      ]);
+      sphere.uniform.uModelMatrix = modelMatrix;
+
+      // Update the normal matrix.
+      const normalMatrix = mat3.create();
+      mat3.normalFromMat4(normalMatrix, modelMatrix);
+      sphere.uniform.uNormalMatrix = normalMatrix;
+  
+      // Render the next sphere.
+      sphere.render();
     }
   }
+}
 
-  function handleMouseMove(event) {
-    const x = event.clientX;
-    const y = event.clientY;
-    const rect = event.target.getBoundingClientRect();
-    const normalizedX = (x - rect.left) / rect.width;
-    const normalizedY = (y - rect.top) / rect.height;
-    const clipX = (normalizedX * 2 - 1) * Math.PI;
-    const clipY = (normalizedY * 2 - 1) * Math.PI * .4;
-    
-    const cameraPosition = vec3.fromValues(0, 0, cameraDistance);
-    vec3.rotateX(cameraPosition, cameraPosition, worldCenter, clipY);
-    vec3.rotateY(cameraPosition, cameraPosition, worldCenter, clipX);
-    
-    const viewMatrix = mat4.create();
-    mat4.lookAt(viewMatrix, cameraPosition, worldCenter, vec3.fromValues(0, 1, 0));
 
-    sphereEntity.uniform.uCamPos = cameraPosition;
-    sphereEntity.uniform.uViewMatrix = viewMatrix;
+// =============================================================================
+// User Interaction
+// =============================================================================
 
-    requestAnimationFrame(render);
+
+function handleMouseMove(event)
+{
+  // Only proceed if left mouse button is pressed.
+  if ((event.buttons & 1) === 0) { 
+    return;
   }
-  document.addEventListener('mousemove', handleMouseMove);
 
-  // Render the first frame.
+  // Update the application state.
+  cameraTilt = clamp(
+    cameraTilt - event.movementY * tiltAcceleration,
+    -Math.PI / 2,
+    Math.PI / 2)
+  cameraPan -= event.movementX * panAcceleration;
+  
+  // Apply the changes and render the next frame.
+  updateCameraPosition();
+}
+
+function handleWheel(event)
+{
+  // Update the application state.
+  cameraDistance = clamp(
+    cameraDistance + event.deltaY * zoomAcceleration, 
+    cameraMinDistance, 
+    cameraMaxDistance);
+
+  // Apply the changes and render the next frame.
+  updateCameraPosition();
+}
+
+function updateProjection()
+{
+  // Get the canvas element and its client size.
+  const canvas = gl.canvas;
+  const clientWidth = canvas.clientWidth;
+  const clientHeight = canvas.clientHeight;
+
+  // Update the projection matrix.
+  const aspectRatio = clientWidth / clientHeight;
+  const projectionMatrix = mat4.create();
+  mat4.perspective(projectionMatrix,
+    degreeToRadians(cameraFov),
+    aspectRatio,
+    nearPlane,
+    farPlane,
+  );
+
+  // Update the uniforms.
+  sphere.uniform.uProjectionMatrix = projectionMatrix;
+
+  // Render the next frame.
   requestAnimationFrame(render);
 }
 
+function updateCameraPosition()
+{
+  const worldZero = vec3.fromValues(0, 0, 0);
+  const verticalAxis = vec3.fromValues(0, 1, 0);
+
+  // Define the camera position based on the application state.
+  const cameraPosition = vec3.fromValues(0, 0, cameraDistance);
+  vec3.rotateX(cameraPosition, cameraPosition, worldZero, cameraTilt);
+  vec3.rotateY(cameraPosition, cameraPosition, worldZero, cameraPan);
+
+  // Derive the view matrix from the camera position.
+  const viewMatrix = mat4.create();
+  mat4.lookAt(viewMatrix, cameraPosition, worldZero, verticalAxis);
+
+  // Update the uniforms.
+  sphere.uniform.uCamPos = cameraPosition;
+  sphere.uniform.uViewMatrix = viewMatrix;
+
+  // Render the next frame.
+  requestAnimationFrame(render);
+}
+
+
+// =============================================================================
+// Utils
+// =============================================================================
+
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function degreeToRadians(degrees) {
+  return degrees * Math.PI / 180.;
+}
+
+
+// =============================================================================
+
+
+/// Start the application.
 main();
