@@ -599,6 +599,10 @@ function createIndexBuffer(gl, indices)
 ///   - uniforms: A map of uniform objects by name.
 async function createShader(gl, name, vertexPath, fragmentPath, attributes, uniforms) 
 {
+  // TODO: it would be nicer to take a single object that combines all the parameters.
+  //   The upside is that it is self-documenting, the downside is that it is more verbose
+  //   and it is possible to forget required parameters (although that's not a big deal).
+
   // Load the Vertex- and Fragment-Shader.
   async function loadShader (type, path) {
     const source = await fetch(`./shader/${path}`).then(response => response.text());

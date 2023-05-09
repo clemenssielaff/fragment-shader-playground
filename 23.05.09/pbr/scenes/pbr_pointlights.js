@@ -39,46 +39,39 @@ const spacing = 2.5;
 // =============================================================================
 
 
-async function main() {
+async function main() 
+{
   // Get the WebGL context from the canvas element in the DOM.
   gl = glance.getContext("canvas");
 
-  // Create uniform constants
-  const aspectRatio = gl.canvas.clientWidth / gl.canvas.clientHeight;
-  const projectionMatrix = mat4.create();
-  mat4.perspective(projectionMatrix,
-    0.7853981633974483, // 45deg field of view in radians
-    aspectRatio,        // aspect ratio
-    10,                 // near clipping plane
-    40,                 // far clipping plane
-  );
-  
+  // Create uniform constants 
   const lightPositions = [
     -10,  10, 10,
      10,  10, 10,
     -10, -10, 10,
      10, -10, 10,
   ]
-  
   const lightColors = [
     300, 300, 300,
     300, 300, 300,
     300, 300, 300,
     300, 300, 300,
   ]
+  const albedo = vec3.fromValues(.5, 0, 0);
+  const ambient = 0.03;
 
   // Create the shaders.
   const pbrShader = await glance.createShader(gl,
     "PBR Shader",                   // name
-    "pbr1.vert",                    // vertex shader source file
-    "pbr1.frag",                    // fragment shader source file
+    "pbr.vert",                     // vertex shader source file
+    "pbr.frag",                     // fragment shader source file
     [                               // attributes
       "aPosition",
       "aNormal",
     ], {                            // uniforms
       "uProjectionMatrix": {
           type: "mat4",
-          value: projectionMatrix
+          value: mat4.create()
       },
      "uViewMatrix": {
           type: "mat4",
@@ -94,9 +87,9 @@ async function main() {
       },
       "uAlbedo": {
           type: "vec3",
-          value: vec3.fromValues(.5, 0, 0)
+          value: albedo
       },
-      "uMetallic": {
+      "uMetalness": {
           type: "float",
           value: 0.0
       },
@@ -104,9 +97,9 @@ async function main() {
           type: "float",
           value: 0.0
       },
-      "uAmbientOcclusion": {
+      "uAmbient": {
           type: "float",
-          value: 1.0
+          value: ambient
       },
       "uLightPositions": {
           type: "vec3",
@@ -163,11 +156,13 @@ function render()
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // Render a grid of spheres.
-  for(let row = 0; row <= rowCount; row++) {
-    // Increase the "metallicness" from bottom to top.
-    sphere.uniform.uMetallic = row / rowCount;
+  for(let row = 0; row <= rowCount; row++) 
+  {
+    // Increase the "metalness" from bottom to top.
+    sphere.uniform.uMetalness = row / rowCount;
 
-    for(let col = 0; col <= colCount; col++) {
+    for(let col = 0; col <= colCount; col++) 
+    {
       // Increase the roughness from left to right.
       sphere.uniform.uRoughness = Math.min(Math.max(col / colCount, .05), 1);
 
