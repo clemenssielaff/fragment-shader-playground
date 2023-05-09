@@ -711,13 +711,13 @@ async function createShader(gl, name, vertexPath, fragmentPath, attributes, unif
 ///   - repeat: Whether the texture should repeat in both directions.
 ///         Defaults to false.
 ///   - placeholderColor: The color to use while the image is loading.
-///         Defaults to [0, 0, 255, 255] (blue).
+///         Defaults to [0, 0, 0, 255] (black).
 ///
 /// @returns The WebGL texture, not yet loaded.
 function createTexture(gl, path, options = {})
 {
   const repeat = options.repeat || false;
-  const placeholderColor = options.placeholderColor || [0, 0, 255, 255];
+  const placeholderColor = options.placeholderColor || [0, 0, 0, 255];
 
   // Constants.
   const level = 0;
@@ -728,7 +728,7 @@ function createTexture(gl, path, options = {})
   // Create a texture.
   const texture = gl.createTexture();
   
-  // Initialize the texture to a single blue pixel 
+  // Initialize the texture to a single pixel 
   // while waiting for the image to load.
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,

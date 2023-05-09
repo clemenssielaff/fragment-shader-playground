@@ -1,26 +1,17 @@
-// Transated to Javascript from 
-//  https://github.com/JoeyDeVries/LearnOpenGL/blob/master/src/6.pbr/2.2.2.ibl_specular_textured/ibl_specular_textured.cpp
-
-
 const { vec3, mat3, mat4 } = glMatrix;
 
 import * as glance from "../glance.js";
 
 async function main() {
   // Get the WebGL context from the canvas element in the DOM.
-  const gl = document.querySelector("#canvas").getContext('webgl2');
-  if (!gl) {
-      console.log('WebGL unavailable');
-  } else {
-      console.log('WebGL is good to go');
-  }
+  const gl = glance.getContext("canvas");
 
   // Create the textures.
-  const texture = await glance.createTexture(gl, "brick_wall_001_diffuse_1k.png");
+  const texture = glance.createTexture(gl, "brick_wall_001_diffuse_1k.png");
 
   // Create the framebuffers.
   const offscreenFramebuffer = glance.createFramebuffer(gl, "Offscreen Framebuffer");
-  const greyscaleFramebuffer = glance.createFramebuffer(gl, "Greyscale Framebuffer");
+  const postFXFramebuffer = glance.createFramebuffer(gl, "Post FX Framebuffer");
 
   // Create the shaders.
   const flatShader = await glance.createShader(gl,
@@ -44,10 +35,10 @@ async function main() {
           value: texture
       }, 
     });
-  const greyscaleShader = await glance.createShader(gl,
-    "Greyscale Shader",             // name
+  const postFXShader = await glance.createShader(gl,
+    "Post FX Shader",               // name
     "quad.vert",                    // vertex shader source file
-    "greyscale.frag",               // fragment shader source file
+    "post_fx.frag",                  // fragment shader source file
     [                               // attributes
       "aPosition",
       "aTexCoord"
@@ -67,7 +58,7 @@ async function main() {
     ], {                            // uniforms
       "uTexture": {
           type: "sampler2D",
-          value: greyscaleFramebuffer.color,
+          value: postFXFramebuffer.color,
       }
     });
 
@@ -76,11 +67,11 @@ async function main() {
     "Quad",
     quadShader,
   );
-  const greyscaleEntity = glance.createEntity(gl, // copy the quad entity geometry
-    "Greyscale Quad",
+  const postFXEntity = glance.createEntity(gl, // copy the quad entity geometry
+    "Post FX Quad",
     quadEntity.vertexBuffers,
     quadEntity.indexBuffer,
-    greyscaleShader,
+    postFXShader,
   );
   const geoEntity = glance.createBox(gl, 
     "Geo Entity", 
@@ -130,9 +121,9 @@ async function main() {
     geoEntity.render();
     offscreenFramebuffer.unuse();
 
-    greyscaleFramebuffer.use();
-    greyscaleEntity.render();
-    greyscaleFramebuffer.unuse();
+    postFXFramebuffer.use();
+    postFXEntity.render();
+    postFXFramebuffer.unuse();
 
     quadEntity.render();
 
